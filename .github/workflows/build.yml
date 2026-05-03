@@ -2,18 +2,17 @@ name: Build Windows EXE
 
 on:
   push:
-    branches: main
+    branches: [ main, master ]
   pull_request:
-    branches: main
-
+    branches: [ main, master ]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   build-windows:
     runs-on: windows-latest
-
-permissions:
-  contents: write
 
     steps:
       - name: Checkout source
@@ -43,7 +42,6 @@ permissions:
         shell: cmd
         run: |
           if not exist release mkdir release
-
           copy build\Release\MetroSmash.exe release\
 
           for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-*.dll) do (
@@ -77,6 +75,6 @@ permissions:
           body: |
             Automated build — commit ${{ github.sha }}
 
-            **To run:** extract all files, keep DLLs next to MetroSmash.exe, run it.
+            To run: extract all files, keep DLLs next to MetroSmash.exe, run it.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
