@@ -1,5 +1,5 @@
 #pragma once
-#include "Math.h"
+#include "GameMath.h"
 #include "World.h"
 #include <SFML/Graphics.hpp>
 #include <GL/gl.h>
