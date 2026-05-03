@@ -1,9 +1,14 @@
 #pragma once
 #include "GameMath.h"
 #include "World.h"
+#include "Camera.h"
+#include "Building.h"
+#include "Vehicle.h"
+#include "Player.h"
 #include <SFML/Graphics.hpp>
 #include <SFML/OpenGL.hpp>
 #include <string>
+#include <vector>
 
 class Renderer {
 public:

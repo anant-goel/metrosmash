@@ -2,6 +2,7 @@
 #include "GameMath.h"
 #include "Physics.h"
 #include <functional>
+#include <vector>
 
 enum class PlayerMode { ON_FOOT, IN_VEHICLE };
 

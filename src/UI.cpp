@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cmath>
+#include <cstdint>
 
 void UI::init() {
     const char* fallbacks[] = {
@@ -100,8 +101,8 @@ void UI::drawDestructionMeter(sf::RenderWindow& w, float pct) {
     sf::RectangleShape fill({fillW, barH});
     fill.setPosition({x, y});
     fill.setFillColor(sf::Color(
-        (sf::Uint8)(pct * 2.5f),
-        (sf::Uint8)(255 - pct * 2.5f),
+        (uint8_t)(pct * 2.5f),
+        (uint8_t)(255 - pct * 2.5f),
         0, 220));
     w.draw(fill);
 

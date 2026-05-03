@@ -25,13 +25,13 @@ void Game::init() {
     sf::ContextSettings settings;
     settings.depthBits         = 24;
     settings.stencilBits       = 8;
-    settings.antialiasingLevel = 4;
+    settings.antiAliasingLevel = 4;
     settings.majorVersion      = 2;
     settings.minorVersion      = 1;
 
     window.create(sf::VideoMode({1280, 720}),
                   "METRO SMASH v3.0 -- Ultimate Destruction Sandbox",
-                  sf::Style::Default, settings);
+                  sf::State::Windowed, settings);
     window.setVerticalSyncEnabled(true);
     window.setFramerateLimit(120);
 
