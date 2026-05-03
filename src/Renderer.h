@@ -1,14 +1,10 @@
 #pragma once
-#include "GameMath.h"
+#include "Math.h"
 #include "World.h"
-#include "Camera.h"
-#include "Building.h"
-#include "Vehicle.h"
-#include "Player.h"
+#include "Animation.h"
 #include <SFML/Graphics.hpp>
-#include <SFML/OpenGL.hpp>
+#include <GL/gl.h>
 #include <string>
-#include <vector>
 
 class Renderer {
 public:
@@ -32,6 +28,8 @@ private:
     void drawParticles(const std::vector<ParticleEffect>& particles);
     void drawExplosionFX(const std::vector<ExplosionForce>& expl);
     void drawExplosiveMarkers(const Player& p);
+    void drawShockwaves(const std::vector<ShockwaveAnim>& waves);
+    void drawDebrisChunks(const std::vector<DebrisAnim>& chunks);
     void drawSkybox();
 
     void pushMatrix(const Mat4& m);

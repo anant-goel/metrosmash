@@ -1,5 +1,5 @@
 #pragma once
-#include "GameMath.h"
+#include "Math.h"
 
 class Camera {
 public:

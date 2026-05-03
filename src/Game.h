@@ -8,7 +8,6 @@
 class Game {
 public:
     void run();
-
 private:
     sf::RenderWindow window;
     World            world;
@@ -29,10 +28,8 @@ private:
     void handleInput(float dt);
     void update(float dt);
     void render();
-
     void lockMouse();
     void unlockMouse();
-
     void onKeyPressed(sf::Keyboard::Key key);
     void onMouseMoved(int dx, int dy);
 };

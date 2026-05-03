@@ -1,5 +1,5 @@
 #pragma once
-#include "GameMath.h"
+#include "Math.h"
 #include "Physics.h"
 
 enum class VehicleType { CAR, TANK, BULLDOZER };

@@ -1,0 +1,68 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Install vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
+          C:/vcpkg/bootstrap-vcpkg.bat
+
+      - name: Install SFML 3 via vcpkg
+        run: C:/vcpkg/vcpkg.exe install sfml:x64-windows
+        env:
+          VCPKG_DEFAULT_TRIPLET: x64-windows
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S . `
+            -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
+            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -A x64
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Collect EXE and DLLs
+        shell: cmd
+        run: |
+          mkdir release
+          copy build\Release\MetroSmash.exe release\
+          rem SFML 3 DLL names (no version suffix in some builds)
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-*.dll) do copy "%%f" release\
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\openal32.dll) do copy "%%f" release\ 2>nul
+          rem Copy assets if present
+          if exist assets xcopy /E /I assets release\assets
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MetroSmash-Windows-x64
+          path: release/
+          retention-days: 30
+
+      - name: Create Release on push to main
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "MetroSmash Build #${{ github.run_number }}"
+          files: release/*
+          body: |
+            Automated build — commit ${{ github.sha }}
+
+            **To run:** extract all files, keep DLLs next to MetroSmash.exe, run it.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

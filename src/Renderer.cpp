@@ -1,7 +1,7 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include <SFML/Graphics.hpp>
-#include <SFML/OpenGL.hpp>
+#include <GL/gl.h>
 #include <cmath>
 
 void Renderer::init(unsigned int width, unsigned int height) {
@@ -82,6 +82,8 @@ void Renderer::render(const World& world, const Camera& camera,
     drawParticles(world.particles);
     drawExplosionFX(world.physics.activeExplosions);
     drawExplosiveMarkers(world.player);
+    drawShockwaves(world.anim.shockwaves);
+    drawDebrisChunks(world.anim.debris);
 }
 
 void Renderer::drawSkybox() {
@@ -305,6 +307,60 @@ void Renderer::drawExplosiveMarkers(const Player& p) {
                        e.position.z + sinf(a)*e.radius);
         }
         glEnd();
+    }
+    glEnable(GL_LIGHTING);
+}
+
+// ---- New animation rendering (appended) ----
+
+void Renderer::drawShockwaves(const std::vector<ShockwaveAnim>& waves) {
+    glDisable(GL_LIGHTING);
+    glEnable(GL_BLEND);
+    for (const auto& sw : waves) {
+        float t    = 1.f - (sw.life / sw.maxLife);
+        float alpha = (sw.life / sw.maxLife) * 0.7f;
+        int segs   = 32;
+        // Outer ring
+        glColor4f(sw.color.x, sw.color.y, sw.color.z, alpha);
+        glBegin(GL_LINE_LOOP);
+        for (int i = 0; i < segs; i++) {
+            float a = i * 2.f * PI / segs;
+            glVertex3f(sw.origin.x + cosf(a)*sw.radius,
+                       sw.origin.y + 0.15f,
+                       sw.origin.z + sinf(a)*sw.radius);
+        }
+        glEnd();
+        // Inner filled ring
+        glColor4f(sw.color.x, sw.color.y*0.6f, 0.1f, alpha * 0.3f);
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex3f(sw.origin.x, sw.origin.y+0.1f, sw.origin.z);
+        for (int i = 0; i <= segs; i++) {
+            float a = i * 2.f * PI / segs;
+            glVertex3f(sw.origin.x + cosf(a)*sw.radius*0.5f,
+                       sw.origin.y + 0.1f,
+                       sw.origin.z + sinf(a)*sw.radius*0.5f);
+        }
+        glEnd();
+    }
+    glEnable(GL_LIGHTING);
+}
+
+void Renderer::drawDebrisChunks(const std::vector<DebrisAnim>& chunks) {
+    glDisable(GL_LIGHTING);
+    for (const auto& d : chunks) {
+        float a = d.life / d.maxLife;
+        glPushMatrix();
+        glTranslatef(d.pos.x, d.pos.y, d.pos.z);
+        glRotatef(d.rot * 180.f/PI, 0.4f, 0.7f, 0.3f);
+        glColor4f(d.color.x, d.color.y, d.color.z, a);
+        float s = d.size * 0.5f;
+        glBegin(GL_QUADS);
+        glNormal3f(0,0,1); glVertex3f(-s,-s,s); glVertex3f(s,-s,s); glVertex3f(s,s,s); glVertex3f(-s,s,s);
+        glNormal3f(0,0,-1); glVertex3f(s,-s,-s); glVertex3f(-s,-s,-s); glVertex3f(-s,s,-s); glVertex3f(s,s,-s);
+        glNormal3f(0,1,0); glVertex3f(-s,s,s); glVertex3f(s,s,s); glVertex3f(s,s,-s); glVertex3f(-s,s,-s);
+        glNormal3f(0,-1,0); glVertex3f(-s,-s,-s); glVertex3f(s,-s,-s); glVertex3f(s,-s,s); glVertex3f(-s,-s,s);
+        glEnd();
+        glPopMatrix();
     }
     glEnable(GL_LIGHTING);
 }

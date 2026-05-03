@@ -3,50 +3,45 @@
 #include "Vehicle.h"
 #include "Player.h"
 #include "Physics.h"
+#include "Weapons.h"
+#include "Achievements.h"
+#include "Animation.h"
+#include "AudioManager.h"
 #include <vector>
 #include <memory>
-
-struct ParticleEffect {
-    Vec3  position;
-    Vec3  velocity;
-    Vec3  color;
-    float life;       // remaining seconds
-    float maxLife;
-    float size;
-};
 
 class World {
 public:
     std::vector<Building>                 buildings;
     std::vector<std::unique_ptr<Vehicle>> vehicles;
-    std::vector<ParticleEffect>           particles;
 
-    Player  player;
-    Physics physics;
+    Player           player;
+    Physics          physics;
+    WeaponSystem     weapons;
+    AchievementSystem achievements;
+    AnimationSystem  anim;
+    AudioManager     audio;
 
-    // Score / stats
-    float   totalDestructionPct = 0.f;
-    int     explosionsDetonated = 0;
+    // Stats
+    float totalDestructionPct = 0.f;
+    int   explosionCount      = 0;
+    float chainTimer          = 0.f;
+    int   chainCount          = 0;
+    int   glassDestroyed      = 0;
 
-    void init();
+    void init(const std::string& assetDir);
     void update(float dt);
-    void rebuild(); // reset map
+    void rebuild();
 
-    // Trigger explosion at world position
-    void explodeAt(Vec3 pos, float radius, float strength);
+    void explodeAt(Vec3 pos, float radius, float strength,
+                   const std::string& sndFire, const std::string& sndExplode);
 
-    // Check vehicle entry/exit
     Vehicle* getNearbyVehicle(Vec3 pos, float range = 3.f);
-
-    // Spawn debris particles
-    void spawnDebris(Vec3 pos, Vec3 color, int count);
-
-    // Ram buildings with vehicle
-    void vehicleRamBuildings(Vehicle& v);
 
 private:
     void buildCity();
     void spawnVehicles();
     void collectAllBodies(std::vector<RigidBody*>& out);
     void updateStats();
+    void checkAchievements();
 };

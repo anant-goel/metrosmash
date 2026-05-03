@@ -7,23 +7,18 @@ on:
     branches: [ main, master ]
   workflow_dispatch:
 
-permissions:
-  contents: write
-
 jobs:
   build-windows:
     runs-on: windows-latest
-
     steps:
-      - name: Checkout source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:/vcpkg
           C:/vcpkg/bootstrap-vcpkg.bat
 
-      - name: Install SFML 3 via vcpkg
+      - name: Install SFML 3 + dependencies
         run: C:/vcpkg/vcpkg.exe install sfml:x64-windows
         env:
           VCPKG_DEFAULT_TRIPLET: x64-windows
@@ -38,69 +33,86 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Collect EXE and DLLs
+      - name: Package - EXE
+        shell: cmd
+        run: mkdir release && copy build\Release\MetroSmash.exe release\
+
+      - name: Package - SFML DLLs
         shell: cmd
         run: |
-          if not exist release mkdir release
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-graphics-2.dll)   do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-graphics-3.dll)   do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-window-2.dll)     do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-window-3.dll)     do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-system-2.dll)     do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-system-3.dll)     do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-audio-2.dll)      do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-audio-3.dll)      do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-network-2.dll)    do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-network-3.dll)    do copy "%%f" release\ 2>nul
 
-          copy build\Release\MetroSmash.exe release\
-
-          echo Copying DLL dependencies...
-          for %%f in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
-            copy "%%f" release\
-          )
-
-          if exist assets (
-            echo Copying assets...
-            xcopy /E /I /Y assets release\assets
-          ) else (
-            echo Assets folder not found, skipping.
-          )
-
-      # 🔥 NEW: Create ZIP
-      - name: Create ZIP package
-        shell: powershell
+      - name: Package - Audio DLLs (OpenAL + FLAC + OGG + Vorbis)
+        shell: cmd
         run: |
-          Compress-Archive -Path release\* -DestinationPath MetroSmash.zip
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\openal32.dll)          do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\FLAC.dll)              do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\ogg.dll)               do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\vorbis.dll)            do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\vorbisenc.dll)         do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\vorbisfile.dll)        do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\opus.dll)              do copy "%%f" release\ 2>nul
 
-      # 📦 Upload folder
-      - name: Upload folder artifact
+      - name: Package - FreeType + image DLLs (needed by sfml-graphics)
+        shell: cmd
+        run: |
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\freetype.dll)          do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\bz2.dll)               do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\libpng16.dll)          do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\zlib1.dll)             do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\jpeg62.dll)            do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\tiff.dll)              do copy "%%f" release\ 2>nul
+
+      - name: Package - Visual C++ Runtime DLLs
+        shell: cmd
+        run: |
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\msvcp140.dll)          do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\msvcp140_1.dll)        do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\msvcp140_2.dll)        do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\vcruntime140.dll)      do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\vcruntime140_1.dll)    do copy "%%f" release\ 2>nul
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\concrt140.dll)         do copy "%%f" release\ 2>nul
+
+      - name: Package - Fallback wildcard sweep (catches any remaining DLLs)
+        shell: cmd
+        run: |
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\*.dll) do copy "%%f" release\ 2>nul
+
+      - name: Package - Assets
+        shell: cmd
+        run: xcopy /E /I assets release\assets
+
+      - name: List packaged files
+        shell: cmd
+        run: dir release\
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MetroSmash-Windows-Folder
+          name: MetroSmash-Windows-x64
           path: release/
           retention-days: 30
 
-      # 📦 Upload ZIP
-      - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: MetroSmash-Windows-ZIP
-          path: MetroSmash.zip
-          retention-days: 30
-
-      # 🚀 Release with ZIP
-      - name: Create Release on push to main
+      - name: Create GitHub Release (on push to main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "MetroSmash Build #${{ github.run_number }}"
-          files: |
-            release/*
-            MetroSmash.zip
+          files: release/*
           body: |
-            Automated build for MetroSmash
+            Automated build — commit ${{ github.sha }}
 
-            Commit: ${{ github.sha }}
-
-            Download options:
-            - ZIP (recommended)
-            - Raw folder
-
-            Instructions:
-            - Extract ZIP
-            - Run MetroSmash.exe
-
+            **To run:** extract the zip, keep ALL files in the same folder, run MetroSmash.exe.
+            No installation needed — all DLLs are included.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

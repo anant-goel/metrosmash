@@ -2,89 +2,98 @@
 #include <cstdlib>
 #include <cmath>
 #include <algorithm>
-#include <functional>
 
-static float rnd(float lo, float hi) {
-    return lo + (float)rand() / RAND_MAX * (hi - lo);
-}
+static float rnd(float lo, float hi) { return lo + (float)rand()/RAND_MAX*(hi-lo); }
 
-void World::init() {
+void World::init(const std::string& assetDir) {
     srand(42);
+
+    audio.init(assetDir + "/audio");
+
     player.init();
-    player.position = {0, 1, 10};
+    player.position = {0, 1, 15};
     player.body.position = player.position;
+
+    weapons.init();
+    weapons.onExplode = [&](Vec3 pos, float radius, float strength,
+                             const std::string& sndFire, const std::string& sndExplode) {
+        explodeAt(pos, radius, strength, sndFire, sndExplode);
+    };
+
+    achievements.init();
+    achievements.onUnlock = [&](const Achievement& a) {
+        audio.play("ui_click", 80.f);
+        // Unlock weapons as rewards
+        if (a.id == AchievementID::DEMOLISHER)         weapons.unlockWeapon(WeaponType::RAILGUN);
+        if (a.id == AchievementID::HALF_GONE)          weapons.unlockWeapon(WeaponType::AIRSTRIKE);
+        if (a.id == AchievementID::CHAIN_REACTION)     weapons.unlockWeapon(WeaponType::CLUSTER_BOMB);
+        if (a.id == AchievementID::TANK_COMMANDER)     weapons.unlockWeapon(WeaponType::EMP);
+        if (a.id == AchievementID::UNSTOPPABLE)        weapons.unlockWeapon(WeaponType::GRAVITY_BOMB);
+        if (a.id == AchievementID::TOTAL_ANNIHILATION) weapons.unlockWeapon(WeaponType::NUKE);
+    };
+
     buildCity();
     spawnVehicles();
 }
 
 void World::buildCity() {
     buildings.clear();
-
-    // Grid of city blocks
-    // Central district — tall buildings
-    struct BuildingDef { int x, z, w, h, d, style; };
-    std::vector<BuildingDef> defs = {
-        // Downtown towers
-        { 0,  0,  4, 12, 4, 3},
-        {-8,  0,  3, 10, 3, 0},
-        { 8,  0,  3,  8, 3, 0},
-        { 0, -10, 4,  9, 4, 3},
-        {-8, -10, 3,  7, 3, 1},
-        { 8, -10, 3,  6, 3, 1},
-        // Mid-range apartments
-        {-16,  0,  4,  5, 4, 1},
-        { 16,  0,  4,  5, 4, 1},
-        {-16,-10,  4,  4, 4, 1},
-        { 16,-10,  4,  4, 4, 1},
-        // Warehouses on outskirts
-        {-24, -5,  5,  3, 6, 2},
-        { 24, -5,  5,  3, 6, 2},
-        {  0, -20,  6,  2, 5, 2},
-        // Extra towers
-        { 4,  10,  3,  8, 3, 0},
-        {-4,  10,  3,  6, 3, 3},
+    struct Def { int x, z, w, h, d, style; };
+    std::vector<Def> defs = {
+        {  0,   0, 4, 14, 4, 3}, {-9,   0, 3, 11, 3, 0}, { 9,   0, 3,  9, 3, 0},
+        {  0, -12, 4, 10, 4, 3}, {-9, -12, 3,  8, 3, 1}, { 9, -12, 3,  7, 3, 1},
+        {-18,   0, 4,  6, 4, 1}, {18,   0, 4,  6, 4, 1}, {-18, -12, 4, 5, 4, 1},
+        { 18, -12, 4,  5, 4, 1}, {-27,  -5, 5, 3, 6, 2}, {27,  -5, 5,  3, 6, 2},
+        {  0, -24, 6,  3, 5, 2}, { 5,  12, 3,  9, 3, 0}, {-5,  12, 3,  7, 3, 3},
+        { 14,  10, 4,  5, 4, 1}, {-14, 10, 4,  4, 4, 0}, {22, -18, 3,  6, 3, 3},
+        {-22, -18, 3,  5, 3, 3},
     };
-
-    for (auto& def : defs) {
+    for (auto& d : defs) {
         Building b;
-        b.build(Vec3((float)def.x, 0, (float)def.z),
-                def.w, def.h, def.d, def.style);
+        b.build(Vec3((float)d.x, 0, (float)d.z), d.w, d.h, d.d, d.style);
         buildings.push_back(std::move(b));
     }
 }
 
 void World::spawnVehicles() {
     vehicles.clear();
-
-    auto addVehicle = [&](float x, float z, VehicleType t) {
+    auto add = [&](float x, float z, VehicleType t) {
         auto v = std::make_unique<Vehicle>();
         v->init(Vec3(x, v->body.halfSize.y, z), t);
         vehicles.push_back(std::move(v));
     };
-
-    addVehicle( 5,  15, VehicleType::CAR);
-    addVehicle(-5,  15, VehicleType::CAR);
-    addVehicle(12,   5, VehicleType::TANK);
-    addVehicle(-20,  0, VehicleType::BULLDOZER);
+    add( 5,  18, VehicleType::CAR);
+    add(-5,  18, VehicleType::CAR);
+    add(14,   6, VehicleType::TANK);
+    add(-22,  0, VehicleType::BULLDOZER);
 }
 
 void World::update(float dt) {
-    // Collect all physics bodies
     std::vector<RigidBody*> bodies;
     collectAllBodies(bodies);
-
-    // Physics step
     physics.update(dt, bodies);
 
-    // Player update
     player.update(dt);
+    weapons.update(dt);
+    achievements.update(dt);
+    anim.update(dt);
 
-    // Vehicle updates (driving handled in Game.cpp input)
+    // Vehicle ramming
     for (auto& v : vehicles) {
-        if (v->occupied) vehicleRamBuildings(*v);
+        if (v->occupied) {
+            Vec3 fwd = v->getForward();
+            float ramDmg = v->getRamDamage();
+            if (ramDmg > 5.f) {
+                for (auto& b : buildings) {
+                    b.applyDamage(v->position + fwd * v->body.halfSize.z,
+                                  v->body.halfSize.x * 1.5f, ramDmg * 0.1f);
+                }
+                if (ramDmg > 50.f) audio.play("building_break", 60.f);
+            }
+        }
     }
 
-    // Building updates
+    // Building loose block physics
     for (auto& b : buildings) {
         std::vector<RigidBody*> bBodies;
         b.collectBodies(bBodies);
@@ -92,98 +101,81 @@ void World::update(float dt) {
         b.update(dt);
     }
 
-    // Particle updates
-    for (auto& p : particles) {
-        p.velocity.y -= 15.f * dt;
-        p.position   += p.velocity * dt;
-        p.life       -= dt;
+    // Chain reaction tracking
+    if (chainTimer > 0.f) {
+        chainTimer -= dt;
+    } else {
+        chainCount = 0;
     }
-    particles.erase(
-        std::remove_if(particles.begin(), particles.end(),
-            [](const ParticleEffect& p){ return p.life <= 0; }),
-        particles.end());
 
     updateStats();
+    checkAchievements();
 }
 
-void World::explodeAt(Vec3 pos, float radius, float strength) {
-    // Collect all bodies
+void World::explodeAt(Vec3 pos, float radius, float strength,
+                      const std::string& sndFire, const std::string& sndExplode) {
     std::vector<RigidBody*> bodies;
     collectAllBodies(bodies);
-
-    // Physics explosion impulse
     physics.applyExplosion(pos, radius, strength, bodies);
 
-    // Damage buildings
+    int glassHit = 0;
     for (auto& b : buildings) {
+        int before = 0, after = 0;
+        for (auto& blk : b.blocks) if (!blk.destroyed && blk.type == 1) before++;
         b.applyDamage(pos, radius, strength * 0.15f);
-        // Spawn debris at explosion site
-        for (auto& blk : b.blocks) {
-            if (!blk.destroyed) continue;
-            Vec3 diff = blk.position - pos;
-            if (diff.length() < radius * 1.2f) {
-                spawnDebris(blk.position, blk.color, 3);
-            }
-        }
-    }
+        for (auto& blk : b.blocks) if (!blk.destroyed && blk.type == 1) after++;
+        glassHit += (before - after);
 
-    // Damage nearby vehicles
+        if (glassHit > 0) audio.play("glass_break", 70.f);
+    }
+    glassDestroyed += glassHit;
+
     for (auto& v : vehicles) {
         Vec3 diff = v->position - pos;
         float dist = diff.length();
         if (dist < radius) {
-            float falloff = 1.f - dist/radius;
-            v->health -= strength * falloff * 0.05f;
-            if (v->health <= 0) v->destroyed = true;
+            float fo = 1.f - dist/radius;
+            v->health -= strength * fo * 0.05f;
+            if (v->health <= 0 && !v->destroyed) {
+                v->destroyed = true;
+                audio.play("car_explode", 90.f);
+                anim.spawnExplosionFX(v->position, 4.f, {1.f,0.4f,0.1f});
+            }
         }
     }
 
-    spawnDebris(pos, {1.f, 0.5f, 0.1f}, 30); // fire/smoke particles
-    explosionsDetonated++;
-}
+    // Explosion VFX + audio
+    audio.play(sndExplode.empty() ? "explosion_large" : sndExplode, 100.f);
+    anim.spawnExplosionFX(pos, radius, {1.f, 0.5f, 0.1f});
+    anim.triggerShake(radius * 0.3f, 0.5f + radius * 0.05f);
+    audio.play("building_break", 65.f);
 
-void World::vehicleRamBuildings(Vehicle& v) {
-    Vec3 fwd = v.getForward();
-    float ramDmg = v.getRamDamage();
-    if (ramDmg < 5.f) return;
-
-    for (auto& b : buildings) {
-        b.applyDamage(v.position + fwd * v.body.halfSize.z,
-                      v.body.halfSize.x * 1.5f, ramDmg * 0.1f);
-    }
+    explosionCount++;
+    chainCount++;
+    chainTimer = 3.f;
 }
 
 Vehicle* World::getNearbyVehicle(Vec3 pos, float range) {
     for (auto& v : vehicles) {
         if (v->destroyed) continue;
-        Vec3 diff = v->position - pos;
-        if (diff.length() < range) return v.get();
+        if ((v->position - pos).length() < range) return v.get();
     }
     return nullptr;
-}
-
-void World::spawnDebris(Vec3 pos, Vec3 color, int count) {
-    for (int i = 0; i < count; i++) {
-        ParticleEffect p;
-        p.position = pos;
-        p.velocity = Vec3(rnd(-5,5), rnd(2,10), rnd(-5,5));
-        p.color    = color;
-        p.maxLife  = p.life = rnd(0.8f, 2.5f);
-        p.size     = rnd(0.15f, 0.5f);
-        particles.push_back(p);
-    }
 }
 
 void World::rebuild() {
     buildCity();
     spawnVehicles();
-    player.position = {0, 1, 10};
+    player.position = {0, 1, 15};
     player.body.position = player.position;
-    player.explosiveCount = 10;
-    player.placedExplosives.clear();
-    explosionsDetonated = 0;
+    weapons.init();
+    explosionCount = 0;
     totalDestructionPct = 0.f;
-    particles.clear();
+    chainCount = 0; chainTimer = 0.f;
+    glassDestroyed = 0;
+    anim.debris.clear();
+    anim.shockwaves.clear();
+    audio.play("ui_click");
 }
 
 void World::collectAllBodies(std::vector<RigidBody*>& out) {
@@ -192,8 +184,23 @@ void World::collectAllBodies(std::vector<RigidBody*>& out) {
 }
 
 void World::updateStats() {
-    if (buildings.empty()) { totalDestructionPct = 0; return; }
+    if (buildings.empty()) return;
     float total = 0;
     for (auto& b : buildings) total += b.destructionRatio();
     totalDestructionPct = total / buildings.size() * 100.f;
+}
+
+void World::checkAchievements() {
+    if (explosionCount == 1)          achievements.check(AchievementID::FIRST_BLOOD);
+    if (explosionCount >= 1)          achievements.checkValue(AchievementID::UNSTOPPABLE, explosionCount);
+    if (totalDestructionPct >= 25.f)  achievements.check(AchievementID::DEMOLISHER);
+    if (totalDestructionPct >= 50.f)  achievements.check(AchievementID::HALF_GONE);
+    if (totalDestructionPct >= 99.f)  achievements.check(AchievementID::TOTAL_ANNIHILATION);
+    achievements.checkValue(AchievementID::GLASS_CANNON, glassDestroyed);
+    if (chainCount >= 5)              achievements.check(AchievementID::CHAIN_REACTION);
+
+    int unlocked = weapons.defs[0].unlocked ? 0 : 0;
+    int cnt = 0;
+    for (auto& d : weapons.defs) if (d.unlocked) cnt++;
+    achievements.checkValue(AchievementID::WEAPON_COLLECTOR, cnt);
 }
