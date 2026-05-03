@@ -2,7 +2,7 @@
 #include "GameMath.h"
 #include "World.h"
 #include <SFML/Graphics.hpp>
-#include <GL/gl.h>
+#include <SFML/OpenGL.hpp>
 #include <string>
 
 class Renderer {

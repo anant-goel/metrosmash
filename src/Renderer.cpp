@@ -1,7 +1,7 @@
 #include "Renderer.h"
 #include "Camera.h"
 #include <SFML/Graphics.hpp>
-#include <GL/gl.h>
+#include <SFML/OpenGL.hpp>
 #include <cmath>
 
 void Renderer::init(unsigned int width, unsigned int height) {
