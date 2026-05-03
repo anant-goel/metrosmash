@@ -1,6 +1,7 @@
 #include "Renderer.h"
 #include "Camera.h"
-#include <SFML/OpenGL.hpp>
+#include <SFML/Graphics.hpp>
+#include <GL/gl.h>
 #include <cmath>
 
 void Renderer::init(unsigned int width, unsigned int height) {
@@ -285,10 +286,11 @@ void Renderer::drawExplosionFX(const std::vector<ExplosionForce>& explosions) {
 
 void Renderer::drawExplosiveMarkers(const Player& p) {
     glDisable(GL_LIGHTING);
+    static sf::Clock blinkClock;
+    float t = blinkClock.getElapsedTime().asSeconds();
     for (const auto& e : p.placedExplosives) {
         if (e.detonated) continue;
-        // Blinking red marker
-        float blink = sinf((float)sf::Clock().getElapsedTime().asSeconds() * 8.f);
+        float blink = sinf(t * 8.f);
         float r = 0.7f + blink * 0.3f;
         drawCube(e.position, {0.2f, 0.2f, 0.2f}, {r, 0.1f, 0.1f});
 

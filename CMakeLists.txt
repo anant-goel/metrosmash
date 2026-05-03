@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find packages
-find_package(SFML 2.5 COMPONENTS graphics window system audio REQUIRED)
+find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # Source files
@@ -16,10 +16,8 @@ set(SOURCES
     src/Player.cpp
     src/Vehicle.cpp
     src/Building.cpp
-    src/Explosion.cpp
     src/Physics.cpp
     src/Renderer.cpp
-    src/Camera.cpp
     src/UI.cpp
 )
 
@@ -28,10 +26,10 @@ add_executable(MetroSmash ${SOURCES})
 target_include_directories(MetroSmash PRIVATE src)
 
 target_link_libraries(MetroSmash
-    sfml-graphics
-    sfml-window
-    sfml-system
-    sfml-audio
+    SFML::Graphics
+    SFML::Window
+    SFML::System
+    SFML::Audio
     OpenGL::GL
 )
 

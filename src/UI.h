@@ -19,6 +19,7 @@ private:
     void drawControls(sf::RenderWindow& w, const World& world);
     void drawPauseMenu(sf::RenderWindow& w);
 
+    // SFML 3: font is required in Text constructor
     sf::Text makeText(const std::string& s, unsigned size,
                       sf::Color color = sf::Color::White);
 };
