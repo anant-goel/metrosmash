@@ -57,28 +57,49 @@ jobs:
             echo Assets folder not found, skipping.
           )
 
-      - name: Upload artifact
+      # 🔥 NEW: Create ZIP
+      - name: Create ZIP package
+        shell: powershell
+        run: |
+          Compress-Archive -Path release\* -DestinationPath MetroSmash.zip
+
+      # 📦 Upload folder
+      - name: Upload folder artifact
         uses: actions/upload-artifact@v4
         with:
-          name: MetroSmash-Windows-x64
+          name: MetroSmash-Windows-Folder
           path: release/
           retention-days: 30
 
+      # 📦 Upload ZIP
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MetroSmash-Windows-ZIP
+          path: MetroSmash.zip
+          retention-days: 30
+
+      # 🚀 Release with ZIP
       - name: Create Release on push to main
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "MetroSmash Build #${{ github.run_number }}"
-          files: release/*
+          files: |
+            release/*
+            MetroSmash.zip
           body: |
             Automated build for MetroSmash
 
             Commit: ${{ github.sha }}
 
+            Download options:
+            - ZIP (recommended)
+            - Raw folder
+
             Instructions:
-            - Extract all files
-            - Keep all DLLs next to MetroSmash.exe
+            - Extract ZIP
             - Run MetroSmash.exe
 
         env:
