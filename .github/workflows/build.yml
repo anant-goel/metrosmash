@@ -38,13 +38,23 @@ jobs:
       - name: Collect EXE and DLLs
         shell: cmd
         run: |
-          mkdir release
+          if not exist release mkdir release
+
           copy build\Release\MetroSmash.exe release\
-          rem SFML 3 DLL names (no version suffix in some builds)
-          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-*.dll) do copy "%%f" release\
-          for %%f in (C:\vcpkg\installed\x64-windows\bin\openal32.dll) do copy "%%f" release\ 2>nul
-          rem Copy assets if present
-          if exist assets xcopy /E /I assets release\assets
+
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\sfml-*.dll) do (
+            if exist "%%f" copy "%%f" release\
+          )
+
+          if exist C:\vcpkg\installed\x64-windows\bin\openal32.dll (
+            copy C:\vcpkg\installed\x64-windows\bin\openal32.dll release\
+          )
+
+          if exist assets (
+            xcopy /E /I /Y assets release\assets
+          ) else (
+            echo Assets folder not found, skipping assets copy.
+          )
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
