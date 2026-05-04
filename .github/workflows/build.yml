@@ -26,11 +26,10 @@ jobs:
           git checkout 2024.06.15
           bootstrap-vcpkg.bat
 
-      - name: Install SFML 2.6
+      - name: Install dependencies from vcpkg.json
         shell: cmd
         run: |
-          set VCPKG_FORCE_SYSTEM_BINARIES=1
-          C:\vcpkg\vcpkg.exe install sfml:x64-windows
+          C:\vcpkg\vcpkg.exe install --triplet x64-windows --x-feature=versions
 
       - name: Configure CMake
         shell: pwsh
@@ -47,7 +46,6 @@ jobs:
         shell: cmd
         run: |
           if not exist release mkdir release
-
           copy build\Release\MetroSmash.exe release\
 
           echo Copying DLL dependencies...

@@ -1,0 +1,9 @@
+{
+  "dependencies": [
+    {
+      "name": "sfml",
+      "version>=": "2.6.1"
+    }
+  ],
+  "builtin-baseline": "7eab8ee6b8bdb94466c46744a9515f6826185cac"
+}
