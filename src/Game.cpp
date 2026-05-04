@@ -18,6 +18,9 @@ struct Game::Impl {
     UI               ui;
 };
 
+Game::Game() = default;
+Game::~Game() = default;
+
 void Game::run() {
     init();
     while (running && impl->window.isOpen()) {

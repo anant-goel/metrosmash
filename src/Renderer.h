@@ -2,7 +2,9 @@
 // NO SFML includes here - forward declare only to avoid miniaudio.h cmath poisoning
 #include "GameMath.h"
 #include "World.h"
+#include "Animation.h"
 #include <string>
+#include <vector>
 
 // Forward declare SFML types used in interface
 namespace sf { class RenderWindow; }
@@ -24,7 +26,6 @@ private:
     void drawBuilding(const Building& b);
     void drawVehicle(const Vehicle& v);
     void drawPlayer(const Player& p, const Camera& cam);
-    void drawParticles(const std::vector<ParticleEffect>& particles);
     void drawExplosionFX(const std::vector<ExplosionForce>& expl);
     void drawExplosiveMarkers(const Player& p);
     void drawSkybox();

@@ -80,7 +80,6 @@ void Renderer::render(const World& world, const Camera& camera,
     }
 
     // Particles and FX
-    drawParticles(world.particles);
     drawExplosionFX(world.physics.activeExplosions);
     drawExplosiveMarkers(world.player);
     drawShockwaves(world.anim.shockwaves);
@@ -237,26 +236,6 @@ void Renderer::drawPlayer(const Player& p, const Camera& cam) {
     drawCube({ 0.15f,-0.3f,0}, {0.12f,0.3f,0.12f}, {0.15f,0.15f,0.5f});
 
     glPopMatrix();
-}
-
-void Renderer::drawParticles(const std::vector<ParticleEffect>& particles) {
-    glDisable(GL_LIGHTING);
-    glPointSize(6.f);
-    glBegin(GL_POINTS);
-    for (const auto& p : particles) {
-        float a = p.life / p.maxLife;
-        glColor4f(p.color.x, p.color.y, p.color.z, a);
-        glVertex3f(p.position.x, p.position.y, p.position.z);
-    }
-    glEnd();
-
-    // Draw larger debris as small cubes
-    for (const auto& p : particles) {
-        if (p.size < 0.2f) continue;
-        float a = p.life / p.maxLife;
-        drawCube(p.position, Vec3(p.size, p.size, p.size)*0.5f, p.color, a);
-    }
-    glEnable(GL_LIGHTING);
 }
 
 void Renderer::drawExplosionFX(const std::vector<ExplosionForce>& explosions) {

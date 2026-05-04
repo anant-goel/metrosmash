@@ -96,7 +96,7 @@ MetroSmash/
 │   ├── Renderer.h/.cpp — OpenGL rendering
 │   ├── Camera.h        — 3rd-person camera
 │   ├── UI.h/.cpp       — HUD, menus
-│   └── GameMath.h          — Vec3, Mat4 utilities
+│   └── Math.h          — Vec3, Mat4 utilities
 └── assets/
     └── fonts/          — Put font.ttf here (optional)
 ```

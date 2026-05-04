@@ -148,7 +148,7 @@ void UI::drawDestructionMeter(sf::RenderWindow& w, float pct) {
 }
 
 void UI::drawVehicleHUD(sf::RenderWindow& w, const World& world) {
-    if (!fontLoaded || world.player.mode != PlayerMode::IN_VEHICLE) return;
+    if (!impl->fontLoaded || world.player.mode != PlayerMode::IN_VEHICLE) return;
     for (auto& v : world.vehicles) {
         if (!v->occupied) continue;
         float spd = std::abs(v->speed) * 3.6f;

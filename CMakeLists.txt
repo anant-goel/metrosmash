@@ -11,10 +11,6 @@ if(MSVC)
     # /wd4244 /wd4267 /wd4996 = suppress common SFML/miniaudio noise
     add_compile_options(/MP /W3 /wd4244 /wd4267 /wd4996 /wd4018 /wd4305)
 
-    # Ensure _CRT_DECLARE_NONSTDC_NAMES=0 so miniaudio's __STDC__ redefinition
-    # doesn't break <cmath> — this is the project-wide fix alongside the
-    # per-TU fix in AudioManager.cpp
-    add_compile_definitions(_CRT_DECLARE_NONSTDC_NAMES=0)
 endif()
 
 find_package(SFML 2.6 COMPONENTS graphics window system audio REQUIRED)
