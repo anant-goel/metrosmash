@@ -4,7 +4,6 @@ project(MetroSmash VERSION 3.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# MSVC-specific flags
 if(MSVC)
     add_compile_definitions(
         WIN32_LEAN_AND_MEAN
@@ -12,6 +11,12 @@ if(MSVC)
         _USE_MATH_DEFINES
         _CRT_SECURE_NO_WARNINGS
         VC_EXTRA_LEAN
+        # THE REAL FIX:
+        # SFML includes <windows.h> which calls <corecrt_math.h> with
+        # __STDC__ undefined, causing all C math functions (sinf, cosf etc.)
+        # to be hidden inside #if blocks. This define forces them visible
+        # in the global namespace regardless of include order.
+        _CRT_DECLARE_NONSTDC_NAMES=1
     )
     add_compile_options(/permissive- /utf-8 /W3)
 endif()
@@ -37,14 +42,6 @@ set(SOURCES
 
 add_executable(MetroSmash ${SOURCES})
 target_include_directories(MetroSmash PRIVATE src)
-
-# === THE REAL FIX ===
-# CMake's target_precompile_headers injects pch.h as the very first include
-# in every translation unit — before SFML, before windows.h, before everything.
-# This guarantees <math.h> symbols exist in the global namespace when
-# MSVC's <cmath> tries to wrap them, eliminating the sinf/tgammaf/etc errors.
-target_precompile_headers(MetroSmash PRIVATE src/pch.h)
-
 target_link_libraries(MetroSmash
     SFML::Graphics
     SFML::Window
