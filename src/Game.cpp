@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Game.h"
 #include <SFML/Graphics.hpp>
 #include <GL/gl.h>

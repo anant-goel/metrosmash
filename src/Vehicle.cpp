@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Vehicle.h"
 #include <algorithm>
 #include <cmath>

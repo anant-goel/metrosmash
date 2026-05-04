@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Building.h"
 #include <cmath>
 #include <algorithm>
