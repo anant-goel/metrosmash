@@ -1,3 +1,4 @@
+#include <SFML/Graphics.hpp>
 #include "Renderer.h"
 #include "Camera.h"
 #include <SFML/Graphics.hpp>

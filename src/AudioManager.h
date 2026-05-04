@@ -1,24 +1,22 @@
 #pragma once
-#include <SFML/Audio.hpp>
+// NO SFML includes here — SFML/Audio.hpp pulls in miniaudio.h which
+// redefines __STDC__ and breaks <cmath> in every file that includes this header.
+// All SFML Audio types are kept inside AudioManagerImpl (PIMPL) in the .cpp only.
 #include <string>
-#include <map>
-#include <vector>
 #include <memory>
 
-// Maps logical sound names to the real extracted APK filenames
+struct AudioManagerImpl; // defined in AudioManager.cpp only
+
 class AudioManager {
 public:
+    AudioManager();
+    ~AudioManager();
+
     bool init(const std::string& assetDir);
     void play(const std::string& name, float volume = 100.f, bool loop = false);
     void stopAll();
     void setMasterVolume(float v);
 
 private:
-    std::string assetDir;
-    std::map<std::string, std::string> nameMap; // logical -> filename
-    std::map<std::string, sf::SoundBuffer> buffers;
-    std::vector<std::unique_ptr<sf::Sound>> activeSounds;
-
-    sf::SoundBuffer* getBuffer(const std::string& filename);
-    void cleanupFinished();
+    std::unique_ptr<AudioManagerImpl> impl;
 };

@@ -1,26 +1,28 @@
 #pragma once
-#include <SFML/Graphics.hpp>
+// NO SFML includes here - all SFML types forward declared or in .cpp
 #include "World.h"
-#include "Renderer.h"
 #include "Camera.h"
-#include "UI.h"
+
+namespace sf { class RenderWindow; class Clock; }
+// Renderer and UI are included in Game.cpp only
+class Renderer;
+class UI;
 
 class Game {
 public:
     void run();
 private:
-    sf::RenderWindow window;
-    World            world;
-    Renderer         renderer;
-    Camera           camera;
-    UI               ui;
+    // Use unique_ptr for SFML/Renderer/UI types so headers stay clean
+    struct Impl;
+    std::unique_ptr<Impl> impl;
 
-    bool  running    = true;
-    bool  paused     = false;
-    bool  mouseLocked= true;
+    World  world;
+    Camera camera;
 
-    sf::Clock clock;
-    float     accumulator = 0.f;
+    bool  running     = true;
+    bool  paused      = false;
+    bool  mouseLocked = true;
+    float accumulator = 0.f;
     static constexpr float FIXED_DT = 1.f / 60.f;
 
     void init();
@@ -30,6 +32,6 @@ private:
     void render();
     void lockMouse();
     void unlockMouse();
-    void onKeyPressed(sf::Keyboard::Key key);
+    void onKeyPressed(int key);
     void onMouseMoved(int dx, int dy);
 };

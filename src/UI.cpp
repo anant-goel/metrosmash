@@ -1,20 +1,29 @@
+#include <SFML/Graphics.hpp>
 #include "UI.h"
+
+struct UI::Impl {
+    sf::Font font;
+    bool fontLoaded = false;
+};
 #include <sstream>
 #include <iomanip>
 #include <cmath>
 #include <algorithm>
 
+UI::UI() : impl(std::make_unique<Impl>()) {}
+UI::~UI() = default;
+
 void UI::init(const std::string& fontPath) {
-    if (font.openFromFile(fontPath)) { fontLoaded = true; return; }
+    if (impl->font.openFromFile(fontPath)) { impl->fontLoaded = true; return; }
     // Fallbacks
     for (auto* p : {"C:/Windows/Fonts/arial.ttf",
                     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"}) {
-        if (font.openFromFile(p)) { fontLoaded = true; return; }
+        if (impl->font.openFromFile(p)) { impl->fontLoaded = true; return; }
     }
 }
 
 sf::Text UI::makeText(const std::string& s, unsigned sz, sf::Color col) {
-    sf::Text t(font, s, sz);
+    sf::Text t(impl->font, s, sz);
     t.setFillColor(col);
     return t;
 }
@@ -61,7 +70,7 @@ void UI::drawCrosshair(sf::RenderWindow& w) {
 }
 
 void UI::drawWeaponBar(sf::RenderWindow& w, const World& world) {
-    if (!fontLoaded) return;
+    if (!impl->fontLoaded) return;
     auto& weps = world.weapons;
     float barW = 60.f, barH = 70.f, gap = 6.f;
     int count = (int)weps.defs.size();
@@ -128,7 +137,7 @@ void UI::drawDestructionMeter(sf::RenderWindow& w, float pct) {
     sf::Uint8 g = (sf::Uint8)std::max(0.f, 255.f - pct * 2.55f);
     drawRoundedRect(w, x, y, fw, barH, sf::Color(r, g, 30, 220));
 
-    if (!fontLoaded) return;
+    if (!impl->fontLoaded) return;
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(1) << pct << "% DESTROYED";
     auto label = makeText(oss.str(), 13, sf::Color::White);
@@ -161,7 +170,7 @@ void UI::drawVehicleHUD(sf::RenderWindow& w, const World& world) {
 }
 
 void UI::drawStats(sf::RenderWindow& w, const World& world) {
-    if (!fontLoaded) return;
+    if (!impl->fontLoaded) return;
     std::ostringstream ss;
     ss << "Explosions: " << world.explosionCount;
     auto t = makeText(ss.str(), 14, sf::Color(200,200,255,200));
@@ -177,7 +186,7 @@ void UI::drawStats(sf::RenderWindow& w, const World& world) {
 }
 
 void UI::drawControls(sf::RenderWindow& w, const World& world) {
-    if (!fontLoaded) return;
+    if (!impl->fontLoaded) return;
     float x = w.getSize().x - 195.f, y = 14.f;
     sf::Color c(200,200,200,150);
     std::vector<std::string> lines =
@@ -198,7 +207,7 @@ void UI::drawControls(sf::RenderWindow& w, const World& world) {
 }
 
 void UI::drawAchievementPopups(sf::RenderWindow& w, const World& world) {
-    if (!fontLoaded) return;
+    if (!impl->fontLoaded) return;
     float y = 55.f;
     for (auto& a : world.achievements.list) {
         if (a.showTimer <= 0.f) continue;
@@ -226,7 +235,7 @@ void UI::drawPauseMenu(sf::RenderWindow& w, const World& world) {
     // Dim overlay
     sf::RectangleShape ov({(float)w.getSize().x, (float)w.getSize().y});
     ov.setFillColor(sf::Color(0,0,0,160)); w.draw(ov);
-    if (!fontLoaded) return;
+    if (!impl->fontLoaded) return;
 
     float cx = w.getSize().x/2.f;
 

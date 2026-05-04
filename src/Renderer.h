@@ -1,10 +1,13 @@
 #pragma once
+// NO SFML includes here - forward declare only to avoid miniaudio.h cmath poisoning
 #include "Math.h"
 #include "World.h"
-#include "Animation.h"
-#include <SFML/Graphics.hpp>
-#include <GL/gl.h>
 #include <string>
+
+// Forward declare SFML types used in interface
+namespace sf { class RenderWindow; }
+
+class Camera;
 
 class Renderer {
 public:
@@ -14,13 +17,9 @@ public:
 
 private:
     unsigned int screenW = 1280, screenH = 720;
-
     void setupGL();
     void setMatrices(const Camera& cam);
-
-    // Draw primitives
     void drawCube(Vec3 pos, Vec3 halfSize, Vec3 color, float alpha = 1.f);
-    void drawCubeWire(Vec3 pos, Vec3 halfSize, Vec3 color);
     void drawGround(float size);
     void drawBuilding(const Building& b);
     void drawVehicle(const Vehicle& v);
@@ -28,10 +27,7 @@ private:
     void drawParticles(const std::vector<ParticleEffect>& particles);
     void drawExplosionFX(const std::vector<ExplosionForce>& expl);
     void drawExplosiveMarkers(const Player& p);
+    void drawSkybox();
     void drawShockwaves(const std::vector<ShockwaveAnim>& waves);
     void drawDebrisChunks(const std::vector<DebrisAnim>& chunks);
-    void drawSkybox();
-
-    void pushMatrix(const Mat4& m);
-    Mat4 currentModelMatrix;
 };
