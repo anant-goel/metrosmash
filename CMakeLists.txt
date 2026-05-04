@@ -4,6 +4,7 @@ project(MetroSmash VERSION 3.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# MSVC-specific flags
 if(MSVC)
     add_compile_definitions(
         WIN32_LEAN_AND_MEAN
@@ -12,15 +13,7 @@ if(MSVC)
         _CRT_SECURE_NO_WARNINGS
         VC_EXTRA_LEAN
     )
-    add_compile_options(
-        /permissive-
-        /utf-8
-        /W3
-        # Force pch.h included first in every translation unit.
-        # This guarantees <math.h> is seen before <windows.h> from SFML,
-        # fixing the cmath/tgammaf/sinf/etc errors on MSVC.
-        /FI"${CMAKE_CURRENT_SOURCE_DIR}/src/pch.h"
-    )
+    add_compile_options(/permissive- /utf-8 /W3)
 endif()
 
 find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
@@ -44,6 +37,14 @@ set(SOURCES
 
 add_executable(MetroSmash ${SOURCES})
 target_include_directories(MetroSmash PRIVATE src)
+
+# === THE REAL FIX ===
+# CMake's target_precompile_headers injects pch.h as the very first include
+# in every translation unit — before SFML, before windows.h, before everything.
+# This guarantees <math.h> symbols exist in the global namespace when
+# MSVC's <cmath> tries to wrap them, eliminating the sinf/tgammaf/etc errors.
+target_precompile_headers(MetroSmash PRIVATE src/pch.h)
+
 target_link_libraries(MetroSmash
     SFML::Graphics
     SFML::Window

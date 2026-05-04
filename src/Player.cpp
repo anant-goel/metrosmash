@@ -1,4 +1,3 @@
-#include "pch.h"
 #include "Player.h"
 #include <functional>
 #include <algorithm>
