@@ -90,6 +90,24 @@ jobs:
           Write-Host "=== Release folder ==="
           Get-ChildItem "release" | Select-Object Name, @{N='KB';E={[int]($_.Length/1KB)}} | Format-Table
 
+	- name: Copy SFML DLLs
+  	shell: cmd
+  	run: |
+    	echo Creating output folder...
+    	if not exist build\Release mkdir build\Release
+
+    	echo Copying SFML DLLs from vcpkg (global)...
+    	if exist C:\vcpkg\installed\x64-windows\bin (
+      	for %%f in (C:\vcpkg\installed\x64-windows\bin\*.dll) do copy "%%f" build\Release\
+    	)
+
+    	echo Copying SFML DLLs from vcpkg (manifest mode)...
+    	if exist build\vcpkg_installed\x64-windows\bin (
+      	for %%f in (build\vcpkg_installed\x64-windows\bin\*.dll) do copy "%%f" build\Release\
+    	)
+
+    	echo Done copying DLLs.
+
       # ── Step 7: Zip ───────────────────────────────────────────────────────
       - name: Create ZIP
         shell: pwsh
