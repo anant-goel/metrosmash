@@ -29,7 +29,7 @@ struct AudioManagerImpl {
         activeSounds.erase(
             std::remove_if(activeSounds.begin(), activeSounds.end(),
                 [](const std::unique_ptr<sf::Sound>& s) {
-                    return s->getStatus() == sf::Sound::Status::Stopped;
+                    return s->getStatus() == sf::Sound::Stopped;
                 }),
             activeSounds.end());
     }

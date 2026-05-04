@@ -14,7 +14,7 @@ if(MSVC)
     add_compile_options(/permissive- /utf-8 /W3)
 endif()
 
-find_package(SFML 3 COMPONENTS Graphics Window System Audio REQUIRED)
+find_package(SFML 2.6 COMPONENTS graphics window system audio REQUIRED)
 find_package(OpenGL REQUIRED)
 
 set(SOURCES
@@ -36,8 +36,15 @@ set(SOURCES
 add_executable(MetroSmash ${SOURCES})
 target_include_directories(MetroSmash PRIVATE src)
 target_link_libraries(MetroSmash
-    SFML::Graphics SFML::Window SFML::System SFML::Audio OpenGL::GL)
+    sfml-graphics
+    sfml-window
+    sfml-system
+    sfml-audio
+    OpenGL::GL
+)
 
-add_custom_command(TARGET MetroSmash POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-    ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:MetroSmash>/assets)
+if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+    add_custom_command(TARGET MetroSmash POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:MetroSmash>/assets")
+endif()

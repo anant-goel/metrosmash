@@ -1,4 +1,3 @@
-#include <SFML/Graphics.hpp>
 #include "UI.h"
 
 struct UI::Impl {
@@ -14,16 +13,19 @@ UI::UI() : impl(std::make_unique<Impl>()) {}
 UI::~UI() = default;
 
 void UI::init(const std::string& fontPath) {
-    if (impl->font.openFromFile(fontPath)) { impl->fontLoaded = true; return; }
+    if (impl->font.loadFromFile(fontPath)) { impl->fontLoaded = true; return; }
     // Fallbacks
     for (auto* p : {"C:/Windows/Fonts/arial.ttf",
                     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"}) {
-        if (impl->font.openFromFile(p)) { impl->fontLoaded = true; return; }
+        if (impl->font.loadFromFile(p)) { impl->fontLoaded = true; return; }
     }
 }
 
 sf::Text UI::makeText(const std::string& s, unsigned sz, sf::Color col) {
-    sf::Text t(impl->font, s, sz);
+    sf::Text t;
+    t.setFont(impl->font);
+    t.setString(s);
+    t.setCharacterSize(sz);
     t.setFillColor(col);
     return t;
 }
@@ -94,7 +96,7 @@ void UI::drawWeaponBar(sf::RenderWindow& w, const World& world) {
         if (locked) {
             // Lock icon text
             auto lt = makeText("LOCK", 11, sf::Color(120,120,120));
-            lt.setPosition({x + barW/2.f - lt.getLocalBounds().size.x/2.f, y + barH/2.f - 8.f});
+            lt.setPosition({x + barW/2.f - lt.getLocalBounds().width/2.f, y + barH/2.f - 8.f});
             w.draw(lt);
         } else {
             // Weapon name (abbreviated)
@@ -107,7 +109,7 @@ void UI::drawWeaponBar(sf::RenderWindow& w, const World& world) {
             std::string ammoStr = std::to_string(world.weapons.ammo[i]);
             if (world.weapons.ammo[i] == 99) ammoStr = "∞";
             auto at = makeText(ammoStr, 16, sel ? sf::Color(255,220,100) : sf::Color(150,150,200));
-            at.setPosition({x + barW/2.f - at.getLocalBounds().size.x/2.f, y + barH - 22.f});
+            at.setPosition({x + barW/2.f - at.getLocalBounds().width/2.f, y + barH - 22.f});
             w.draw(at);
 
             // Key number
@@ -120,7 +122,7 @@ void UI::drawWeaponBar(sf::RenderWindow& w, const World& world) {
     // Selected weapon name above bar
     auto& sel = weps.selected();
     auto nt = makeText(sel.name, 16, sf::Color(255,200,100));
-    nt.setPosition({w.getSize().x/2.f - nt.getLocalBounds().size.x/2.f, y - 22.f});
+    nt.setPosition({w.getSize().x/2.f - nt.getLocalBounds().width/2.f, y - 22.f});
     w.draw(nt);
 }
 
@@ -141,7 +143,7 @@ void UI::drawDestructionMeter(sf::RenderWindow& w, float pct) {
     std::ostringstream oss;
     oss << std::fixed << std::setprecision(1) << pct << "% DESTROYED";
     auto label = makeText(oss.str(), 13, sf::Color::White);
-    label.setPosition({x + barW/2.f - label.getLocalBounds().size.x/2.f, y + 1.f});
+    label.setPosition({x + barW/2.f - label.getLocalBounds().width/2.f, y + 1.f});
     w.draw(label);
 }
 
@@ -242,11 +244,11 @@ void UI::drawPauseMenu(sf::RenderWindow& w, const World& world) {
     // Title
     auto title = makeText("METRO SMASH", 54, sf::Color(255,70,40));
     title.setStyle(sf::Text::Bold);
-    title.setPosition({cx - title.getLocalBounds().size.x/2.f, 80.f});
+    title.setPosition({cx - title.getLocalBounds().width/2.f, 80.f});
     w.draw(title);
 
     auto sub = makeText("ULTIMATE DESTRUCTION SANDBOX", 18, sf::Color(200,150,100));
-    sub.setPosition({cx - sub.getLocalBounds().size.x/2.f, 148.f});
+    sub.setPosition({cx - sub.getLocalBounds().width/2.f, 148.f});
     w.draw(sub);
 
     // Stats box
@@ -268,7 +270,7 @@ void UI::drawPauseMenu(sf::RenderWindow& w, const World& world) {
     // Achievement list
     float ay = 400.f;
     auto ah = makeText("ACHIEVEMENTS", 18, sf::Color(255,210,60));
-    ah.setPosition({cx - ah.getLocalBounds().size.x/2.f, ay});
+    ah.setPosition({cx - ah.getLocalBounds().width/2.f, ay});
     w.draw(ah);
     ay += 28.f;
     int cols = 2; float colW = 340.f;
@@ -286,6 +288,6 @@ void UI::drawPauseMenu(sf::RenderWindow& w, const World& world) {
 
     // Resume hint
     auto resume = makeText("Press ESC or ENTER to resume   |   R to Rebuild", 16, sf::Color(180,180,180));
-    resume.setPosition({cx - resume.getLocalBounds().size.x/2.f, w.getSize().y - 50.f});
+    resume.setPosition({cx - resume.getLocalBounds().width/2.f, w.getSize().y - 50.f});
     w.draw(resume);
 }

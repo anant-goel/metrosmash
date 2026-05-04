@@ -1,6 +1,6 @@
 #pragma once
 // NO SFML includes here - forward declare only to avoid miniaudio.h cmath poisoning
-#include "Math.h"
+#include "GameMath.h"
 #include "World.h"
 #include <string>
 

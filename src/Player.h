@@ -1,6 +1,6 @@
 #pragma once
 #include <functional>
-#include "Math.h"
+#include "GameMath.h"
 #include "Physics.h"
 
 enum class PlayerMode { ON_FOOT, IN_VEHICLE };

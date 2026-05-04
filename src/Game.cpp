@@ -2,7 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
 #include <SFML/System.hpp>
-#include <GL/gl.h>
+#include <SFML/OpenGL.hpp>
 
 #include "Game.h"
 #include "Renderer.h"
@@ -44,7 +44,7 @@ void Game::init() {
     settings.antialiasingLevel = 4;
     settings.majorVersion = 2; settings.minorVersion = 1;
 
-    impl->window.create(sf::VideoMode({1280, 720}),
+    impl->window.create(sf::VideoMode(1280, 720),
         "METRO SMASH v3.0 -- Ultimate Destruction Sandbox",
         sf::Style::Default, settings);
     impl->window.setVerticalSyncEnabled(true);
@@ -70,30 +70,37 @@ void Game::unlockMouse() {
 }
 
 void Game::handleEvents() {
-    while (auto ev = impl->window.pollEvent()) {
-        if (ev->is<sf::Event::Closed>()) { running = false; }
-        else if (const auto* r = ev->getIf<sf::Event::Resized>()) {
-            impl->renderer.resize(r->size.x, r->size.y);
-            camera.aspect = (float)r->size.x / (float)r->size.y;
+    sf::Event ev;
+    while (impl->window.pollEvent(ev)) {
+        if (ev.type == sf::Event::Closed) {
+            running = false;
         }
-        else if (const auto* k = ev->getIf<sf::Event::KeyPressed>()) {
-            onKeyPressed((int)k->code);
+        else if (ev.type == sf::Event::Resized) {
+            impl->renderer.resize(ev.size.width, ev.size.height);
+            camera.aspect = (float)ev.size.width / (float)ev.size.height;
         }
-        else if (ev->is<sf::Event::FocusLost>()) { unlockMouse(); paused = true; }
-        else if (const auto* m = ev->getIf<sf::Event::MouseMoved>()) {
+        else if (ev.type == sf::Event::KeyPressed) {
+            onKeyPressed((int)ev.key.code);
+        }
+        else if (ev.type == sf::Event::LostFocus) {
+            unlockMouse();
+            paused = true;
+        }
+        else if (ev.type == sf::Event::MouseMoved) {
             if (mouseLocked) {
-                int cx = impl->window.getSize().x/2;
-                int cy = impl->window.getSize().y/2;
-                int dx = m->position.x - cx, dy = m->position.y - cy;
+                int cx = impl->window.getSize().x / 2;
+                int cy = impl->window.getSize().y / 2;
+                int dx = ev.mouseMove.x - cx;
+                int dy = ev.mouseMove.y - cy;
                 if (dx || dy) {
                     onMouseMoved(dx, dy);
                     sf::Mouse::setPosition(sf::Vector2i(cx, cy), impl->window);
                 }
             }
         }
-        else if (const auto* w = ev->getIf<sf::Event::MouseWheelScrolled>()) {
-            if (w->delta > 0) world.weapons.selectNext();
-            else              world.weapons.selectPrev();
+        else if (ev.type == sf::Event::MouseWheelScrolled) {
+            if (ev.mouseWheelScroll.delta > 0) world.weapons.selectNext();
+            else                              world.weapons.selectPrev();
             world.audio.play("ui_click", 60.f);
         }
     }
