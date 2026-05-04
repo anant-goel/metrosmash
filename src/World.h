@@ -7,6 +7,7 @@
 #include "Achievements.h"
 #include "Animation.h"
 #include "AudioManager.h"
+#include "ParticleEffect.h"
 #include <vector>
 #include <memory>
 
@@ -21,6 +22,8 @@ public:
     AchievementSystem achievements;
     AnimationSystem  anim;
     AudioManager     audio;
+
+    std::vector<ParticleEffect> particles;
 
     // Stats
     float totalDestructionPct = 0.f;

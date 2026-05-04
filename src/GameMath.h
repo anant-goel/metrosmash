@@ -66,7 +66,7 @@ struct Mat4 {
 
     static Mat4 rotateY(float angle) {
         Mat4 r = identity();
-        float c = std::cos(angle), s = std::sin(angle);
+        float c=std::cos(angle), s=std::sin(angle);
         r.m[0]=c; r.m[2]=-s;
         r.m[8]=s; r.m[10]=c;
         return r;
@@ -74,20 +74,20 @@ struct Mat4 {
 
     static Mat4 rotateX(float angle) {
         Mat4 r = identity();
-        float c = std::cos(angle), s = std::sin(angle);
+        float c=std::cos(angle), s=std::sin(angle);
         r.m[5]=c; r.m[6]=s;
         r.m[9]=-s; r.m[10]=c;
         return r;
     }
 
-    static Mat4 perspective(float fov, float aspect, float zNear, float zFar) {
+    static Mat4 perspective(float fov, float aspect, float nearPlane, float farPlane) {
         Mat4 r;
         float f = 1.f / std::tan(fov * 0.5f);
         r.m[0]  = f / aspect;
         r.m[5]  = f;
-        r.m[10] = (zFar + zNear) / (zNear - zFar);
+        r.m[10] = (farPlane + nearPlane) / (nearPlane - farPlane);
         r.m[11] = -1.f;
-        r.m[14] = (2.f * zFar * zNear) / (zNear - zFar);
+        r.m[14] = (2.f * farPlane * nearPlane) / (nearPlane - farPlane);
         return r;
     }
 

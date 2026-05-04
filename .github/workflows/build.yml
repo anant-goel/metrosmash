@@ -82,12 +82,6 @@ jobs:
             }
           }
 
-          if (Test-Path "build\vcpkg_installed\x64-windows\bin") {
-            Get-ChildItem "build\vcpkg_installed\x64-windows\bin\*.dll" | ForEach-Object {
-              Copy-Item $_.FullName "release\" -Force
-            }
-          }
-
           # Assets folder (fonts + audio)
           if (Test-Path "assets") {
             Copy-Item -Recurse -Force "assets" "release\assets"

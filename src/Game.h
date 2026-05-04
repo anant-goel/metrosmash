@@ -13,6 +13,7 @@ class Game {
 public:
     Game();
     ~Game();
+
     void run();
 private:
     // Use unique_ptr for SFML/Renderer/UI types so headers stay clean

@@ -44,15 +44,6 @@ target_link_libraries(MetroSmash
     OpenGL::GL
 )
 
-add_custom_command(TARGET MetroSmash POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:sfml-graphics>
-        $<TARGET_FILE:sfml-window>
-        $<TARGET_FILE:sfml-system>
-        $<TARGET_FILE:sfml-audio>
-        $<TARGET_FILE_DIR:MetroSmash>
-)
-
 # Copy assets next to the exe after build
 if(EXISTS ${CMAKE_SOURCE_DIR}/assets)
     add_custom_command(TARGET MetroSmash POST_BUILD
