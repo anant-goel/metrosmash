@@ -14,36 +14,45 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
-    env:
-      # Pin vcpkg to 2024.09.30 release — has SFML 2.6.1, has versions/baseline.json
-      VCPKG_COMMIT: a34c873a9197a40b2f29f2f8dfd6be4965bd01b8
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ── vcpkg: clone + checkout pinned commit ─────────────────────────────
-      - name: Setup vcpkg
+      # ── Step 1: Install vcpkg (latest HEAD, full clone) ───────────────────
+      # We use the FULL clone so git show works on any commit.
+      # We do NOT pin a specific commit in the workflow — instead we read
+      # whatever HEAD is and inject it as builtin-baseline dynamically.
+      - name: Clone and bootstrap vcpkg
         shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-          cd C:\vcpkg
-          git fetch --depth=1 origin $env:VCPKG_COMMIT
-          git checkout $env:VCPKG_COMMIT
-          .\bootstrap-vcpkg.bat -disableMetrics
-          Write-Host "vcpkg version: $(C:\vcpkg\vcpkg.exe version)"
+          C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
 
-      # ── Install SFML 2.6.1 (overridden in vcpkg.json) ────────────────────
-      - name: Install dependencies
+      # ── Step 2: Patch vcpkg.json with the real current HEAD baseline ──────
+      # This is the KEY fix: builtin-baseline must equal the exact commit
+      # that vcpkg.exe sees in its own .git dir. We read it live.
+      - name: Set vcpkg baseline to current HEAD
+        shell: pwsh
+        run: |
+          $sha = git -C C:\vcpkg rev-parse HEAD
+          Write-Host "vcpkg HEAD: $sha"
+
+          $vcpkgJson = Get-Content vcpkg.json | ConvertFrom-Json
+          $vcpkgJson."builtin-baseline" = $sha
+          $vcpkgJson | ConvertTo-Json -Depth 10 | Set-Content vcpkg.json
+
+          Write-Host "Updated vcpkg.json:"
+          Get-Content vcpkg.json
+
+      # ── Step 3: Install SFML 2.6.1 (overrides block forces it) ───────────
+      - name: Install dependencies via vcpkg
         shell: pwsh
         run: |
           C:\vcpkg\vcpkg.exe install `
             --triplet x64-windows `
-            --x-manifest-root . `
-            --x-install-root C:\vcpkg\installed `
-            --x-feature=versions
+            --x-manifest-root .
 
-      # ── CMake configure ───────────────────────────────────────────────────
+      # ── Step 4: Configure CMake ───────────────────────────────────────────
       - name: Configure CMake
         shell: pwsh
         run: |
@@ -53,40 +62,40 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release `
             -A x64
 
-      # ── Build ─────────────────────────────────────────────────────────────
+      # ── Step 5: Build ─────────────────────────────────────────────────────
       - name: Build Release
         run: cmake --build build --config Release --parallel
 
-      # ── Collect EXE + DLLs + assets ──────────────────────────────────────
+      # ── Step 6: Collect EXE + DLLs + assets ──────────────────────────────
       - name: Collect release files
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release | Out-Null
 
-          # EXE
+          # The EXE
           Copy-Item "build\Release\MetroSmash.exe" "release\" -Force
 
-          # All runtime DLLs from vcpkg (SFML + OpenAL + FLAC + OGG + Vorbis)
+          # Runtime DLLs (SFML, OpenAL, FLAC, OGG, Vorbis, freetype, etc.)
           if (Test-Path "C:\vcpkg\installed\x64-windows\bin") {
             Get-ChildItem "C:\vcpkg\installed\x64-windows\bin\*.dll" | ForEach-Object {
               Copy-Item $_.FullName "release\" -Force
             }
           }
 
-          # Assets (fonts, audio clips)
+          # Assets folder (fonts + audio)
           if (Test-Path "assets") {
             Copy-Item -Recurse -Force "assets" "release\assets"
           }
 
-          Write-Host "=== Release contents ==="
-          Get-ChildItem "release\" | Select-Object Name,Length | Format-Table -AutoSize
+          Write-Host "=== Release folder ==="
+          Get-ChildItem "release" | Select-Object Name, @{N='KB';E={[int]($_.Length/1KB)}} | Format-Table
 
-      # ── Zip ───────────────────────────────────────────────────────────────
+      # ── Step 7: Zip ───────────────────────────────────────────────────────
       - name: Create ZIP
         shell: pwsh
         run: Compress-Archive -Path "release\*" -DestinationPath "MetroSmash.zip" -Force
 
-      # ── Upload artifacts ──────────────────────────────────────────────────
+      # ── Step 8: Upload artifacts ──────────────────────────────────────────
       - name: Upload folder artifact
         uses: actions/upload-artifact@v4
         with:
@@ -101,7 +110,7 @@ jobs:
           path: MetroSmash.zip
           retention-days: 30
 
-      # ── GitHub Release (push to main only) ───────────────────────────────
+      # ── Step 9: GitHub Release on push to main ────────────────────────────
       - name: Create GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2

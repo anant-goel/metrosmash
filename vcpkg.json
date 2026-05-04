@@ -7,7 +7,7 @@
       "version>=": "2.6.1"
     }
   ],
-  "builtin-baseline": "a34c873a9197a40b2f29f2f8dfd6be4965bd01b8",
+  "builtin-baseline": "PLACEHOLDER_REPLACED_BY_CI",
   "overrides": [
     {
       "name": "sfml",
