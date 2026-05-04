@@ -14,31 +14,34 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
+    env:
+      # Pin vcpkg to 2024.09.30 release — has SFML 2.6.1, has versions/baseline.json
+      VCPKG_COMMIT: a34c873a9197a40b2f29f2f8dfd6be4965bd01b8
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      # ── vcpkg setup ───────────────────────────────────────────────────────
-      # Pin to a baseline that ships SFML 2.6.1 (not SFML 3).
-      # This commit is 2024-06-15 and includes sfml 2.6.1 in the registry.
-      - name: Install vcpkg (pinned 2024-06-15)
-        shell: cmd
+      # ── vcpkg: clone + checkout pinned commit ─────────────────────────────
+      - name: Setup vcpkg
+        shell: pwsh
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           cd C:\vcpkg
-          git checkout 7eab8ee6b8bdb94466c46744a9515f6826185cac
-          bootstrap-vcpkg.bat -disableMetrics
+          git fetch --depth=1 origin $env:VCPKG_COMMIT
+          git checkout $env:VCPKG_COMMIT
+          .\bootstrap-vcpkg.bat -disableMetrics
+          Write-Host "vcpkg version: $(C:\vcpkg\vcpkg.exe version)"
 
-      # ── Install SFML 2.6.1 via vcpkg ─────────────────────────────────────
-      # We pass --x-manifest-root to pick up vcpkg.json from the repo root.
-      # The vcpkg.json pins sfml >= 2.6.1 and the baseline ensures 2.6.x.
-      - name: Install dependencies (SFML 2.6.1 + OpenGL)
-        shell: cmd
+      # ── Install SFML 2.6.1 (overridden in vcpkg.json) ────────────────────
+      - name: Install dependencies
+        shell: pwsh
         run: |
-          C:\vcpkg\vcpkg.exe install ^
-            --triplet x64-windows ^
-            --x-manifest-root . ^
-            --x-install-root C:\vcpkg\installed
+          C:\vcpkg\vcpkg.exe install `
+            --triplet x64-windows `
+            --x-manifest-root . `
+            --x-install-root C:\vcpkg\installed `
+            --x-feature=versions
 
       # ── CMake configure ───────────────────────────────────────────────────
       - name: Configure CMake
@@ -63,31 +66,25 @@ jobs:
           # EXE
           Copy-Item "build\Release\MetroSmash.exe" "release\" -Force
 
-          # All DLLs from vcpkg (SFML + openal-soft + flac + ogg + vorbis etc.)
-          $dllDirs = @(
-            "C:\vcpkg\installed\x64-windows\bin"
-          )
-          foreach ($dir in $dllDirs) {
-            if (Test-Path $dir) {
-              Get-ChildItem "$dir\*.dll" | ForEach-Object {
-                Copy-Item $_.FullName "release\" -Force
-              }
+          # All runtime DLLs from vcpkg (SFML + OpenAL + FLAC + OGG + Vorbis)
+          if (Test-Path "C:\vcpkg\installed\x64-windows\bin") {
+            Get-ChildItem "C:\vcpkg\installed\x64-windows\bin\*.dll" | ForEach-Object {
+              Copy-Item $_.FullName "release\" -Force
             }
           }
 
-          # Assets (fonts, audio)
+          # Assets (fonts, audio clips)
           if (Test-Path "assets") {
             Copy-Item -Recurse -Force "assets" "release\assets"
           }
 
-          Write-Host "Release folder contents:"
-          Get-ChildItem "release\" | Select-Object Name, Length | Format-Table -AutoSize
+          Write-Host "=== Release contents ==="
+          Get-ChildItem "release\" | Select-Object Name,Length | Format-Table -AutoSize
 
       # ── Zip ───────────────────────────────────────────────────────────────
       - name: Create ZIP
         shell: pwsh
-        run: |
-          Compress-Archive -Path "release\*" -DestinationPath "MetroSmash.zip" -Force
+        run: Compress-Archive -Path "release\*" -DestinationPath "MetroSmash.zip" -Force
 
       # ── Upload artifacts ──────────────────────────────────────────────────
       - name: Upload folder artifact
@@ -111,16 +108,14 @@ jobs:
         with:
           tag_name: build-${{ github.run_number }}
           name: "MetroSmash Build #${{ github.run_number }}"
-          files: |
-            MetroSmash.zip
+          files: MetroSmash.zip
           body: |
-            ## Metro Smash — Automated Build #${{ github.run_number }}
-
+            ## Metro Smash — Build #${{ github.run_number }}
             **Commit:** ${{ github.sha }}
 
             ### How to run
             1. Download and extract `MetroSmash.zip`
-            2. Keep **all DLLs** in the same folder as `MetroSmash.exe`
+            2. Keep **all DLLs** next to `MetroSmash.exe`
             3. Run `MetroSmash.exe`
 
             ### Requirements
