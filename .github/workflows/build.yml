@@ -18,53 +18,78 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install vcpkg pinned
+      # ── vcpkg setup ───────────────────────────────────────────────────────
+      # Pin to a baseline that ships SFML 2.6.1 (not SFML 3).
+      # This commit is 2024-06-15 and includes sfml 2.6.1 in the registry.
+      - name: Install vcpkg (pinned 2024-06-15)
         shell: cmd
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           cd C:\vcpkg
-          git checkout 2024.06.15
-          bootstrap-vcpkg.bat
+          git checkout 7eab8ee6b8bdb94466c46744a9515f6826185cac
+          bootstrap-vcpkg.bat -disableMetrics
 
-      - name: Install dependencies from vcpkg.json
+      # ── Install SFML 2.6.1 via vcpkg ─────────────────────────────────────
+      # We pass --x-manifest-root to pick up vcpkg.json from the repo root.
+      # The vcpkg.json pins sfml >= 2.6.1 and the baseline ensures 2.6.x.
+      - name: Install dependencies (SFML 2.6.1 + OpenGL)
         shell: cmd
         run: |
-          C:\vcpkg\vcpkg.exe install --triplet x64-windows --x-feature=versions
+          C:\vcpkg\vcpkg.exe install ^
+            --triplet x64-windows ^
+            --x-manifest-root . ^
+            --x-install-root C:\vcpkg\installed
 
+      # ── CMake configure ───────────────────────────────────────────────────
       - name: Configure CMake
         shell: pwsh
         run: |
           cmake -B build -S . `
-            -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
+            -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DCMAKE_BUILD_TYPE=Release `
             -A x64
 
-      - name: Build
+      # ── Build ─────────────────────────────────────────────────────────────
+      - name: Build Release
         run: cmake --build build --config Release --parallel
 
-      - name: Collect EXE and DLLs
-        shell: cmd
+      # ── Collect EXE + DLLs + assets ──────────────────────────────────────
+      - name: Collect release files
+        shell: pwsh
         run: |
-          if not exist release mkdir release
-          copy build\Release\MetroSmash.exe release\
+          New-Item -ItemType Directory -Force -Path release | Out-Null
 
-          echo Copying DLL dependencies...
-          for %%f in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
-            copy "%%f" release\
+          # EXE
+          Copy-Item "build\Release\MetroSmash.exe" "release\" -Force
+
+          # All DLLs from vcpkg (SFML + openal-soft + flac + ogg + vorbis etc.)
+          $dllDirs = @(
+            "C:\vcpkg\installed\x64-windows\bin"
           )
+          foreach ($dir in $dllDirs) {
+            if (Test-Path $dir) {
+              Get-ChildItem "$dir\*.dll" | ForEach-Object {
+                Copy-Item $_.FullName "release\" -Force
+              }
+            }
+          }
 
-          if exist assets (
-            echo Copying assets...
-            xcopy /E /I /Y assets release\assets
-          ) else (
-            echo Assets folder not found, skipping.
-          )
+          # Assets (fonts, audio)
+          if (Test-Path "assets") {
+            Copy-Item -Recurse -Force "assets" "release\assets"
+          }
 
-      - name: Create ZIP package
-        shell: powershell
+          Write-Host "Release folder contents:"
+          Get-ChildItem "release\" | Select-Object Name, Length | Format-Table -AutoSize
+
+      # ── Zip ───────────────────────────────────────────────────────────────
+      - name: Create ZIP
+        shell: pwsh
         run: |
-          Compress-Archive -Path release\* -DestinationPath MetroSmash.zip -Force
+          Compress-Archive -Path "release\*" -DestinationPath "MetroSmash.zip" -Force
 
+      # ── Upload artifacts ──────────────────────────────────────────────────
       - name: Upload folder artifact
         uses: actions/upload-artifact@v4
         with:
@@ -79,24 +104,27 @@ jobs:
           path: MetroSmash.zip
           retention-days: 30
 
-      - name: Create Release on push to main
+      # ── GitHub Release (push to main only) ───────────────────────────────
+      - name: Create GitHub Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
           name: "MetroSmash Build #${{ github.run_number }}"
           files: |
-            release/*
             MetroSmash.zip
           body: |
-            Automated build for MetroSmash
+            ## Metro Smash — Automated Build #${{ github.run_number }}
 
-            Commit: ${{ github.sha }}
+            **Commit:** ${{ github.sha }}
 
-            Instructions:
-            - Download MetroSmash.zip
-            - Extract all files
-            - Keep all DLLs next to MetroSmash.exe
-            - Run MetroSmash.exe
+            ### How to run
+            1. Download and extract `MetroSmash.zip`
+            2. Keep **all DLLs** in the same folder as `MetroSmash.exe`
+            3. Run `MetroSmash.exe`
+
+            ### Requirements
+            - Windows 10 / 11 (64-bit)
+            - GPU with OpenGL 2.1+ support
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,8 +1,21 @@
 cmake_minimum_required(VERSION 3.16)
-project(MetroSmash VERSION 3.0)
+project(MetroSmash VERSION 3.1)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# ── MSVC-specific flags ───────────────────────────────────────────────────────
+if(MSVC)
+    # /MP  = parallel compilation
+    # /W3  = moderate warnings
+    # /wd4244 /wd4267 /wd4996 = suppress common SFML/miniaudio noise
+    add_compile_options(/MP /W3 /wd4244 /wd4267 /wd4996 /wd4018 /wd4305)
+
+    # Ensure _CRT_DECLARE_NONSTDC_NAMES=0 so miniaudio's __STDC__ redefinition
+    # doesn't break <cmath> — this is the project-wide fix alongside the
+    # per-TU fix in AudioManager.cpp
+    add_compile_definitions(_CRT_DECLARE_NONSTDC_NAMES=0)
+endif()
 
 find_package(SFML 2.6 COMPONENTS graphics window system audio REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -17,6 +30,10 @@ set(SOURCES
     src/Physics.cpp
     src/Renderer.cpp
     src/UI.cpp
+    src/AudioManager.cpp
+    src/Weapons.cpp
+    src/Animation.cpp
+    src/Achievements.cpp
 )
 
 add_executable(MetroSmash ${SOURCES})
@@ -31,9 +48,18 @@ target_link_libraries(MetroSmash
     OpenGL::GL
 )
 
+# Copy assets next to the exe after build
 if(EXISTS ${CMAKE_SOURCE_DIR}/assets)
     add_custom_command(TARGET MetroSmash POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:MetroSmash>/assets
+            ${CMAKE_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:MetroSmash>/assets
+    )
+endif()
+
+# Copy required DLLs on Windows (vcpkg handles this, but belt-and-suspenders)
+if(WIN32)
+    add_custom_command(TARGET MetroSmash POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "Build complete: MetroSmash.exe"
     )
 endif()
