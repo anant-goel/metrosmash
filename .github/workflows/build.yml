@@ -18,21 +18,22 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Install vcpkg pinned before SFML 3
+      - name: Install vcpkg pinned
         shell: cmd
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-          cd /d C:\vcpkg
-          git checkout 2024.07.12
+          cd C:\vcpkg
+          git checkout 2024.06.15
           bootstrap-vcpkg.bat
 
-      - name: Install SFML 2.6 via vcpkg
+      - name: Install SFML 2.6
         shell: cmd
-        run: C:\vcpkg\vcpkg.exe install sfml:x64-windows
-        env:
-          VCPKG_DEFAULT_TRIPLET: x64-windows
+        run: |
+          set VCPKG_FORCE_SYSTEM_BINARIES=1
+          C:\vcpkg\vcpkg.exe install sfml:x64-windows
 
       - name: Configure CMake
+        shell: pwsh
         run: |
           cmake -B build -S . `
             -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake `
@@ -42,26 +43,29 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Collect EXE, DLLs and assets
+      - name: Collect EXE and DLLs
         shell: cmd
         run: |
           if not exist release mkdir release
+
           copy build\Release\MetroSmash.exe release\
 
-          echo Copying all vcpkg runtime DLLs...
-          for %%f in (C:\vcpkg\installed\x64-windows\bin\*.dll) do copy "%%f" release\
+          echo Copying DLL dependencies...
+          for %%f in (C:\vcpkg\installed\x64-windows\bin\*.dll) do (
+            copy "%%f" release\
+          )
 
           if exist assets (
+            echo Copying assets...
             xcopy /E /I /Y assets release\assets
           ) else (
-            echo Assets folder not found, skipping assets copy.
+            echo Assets folder not found, skipping.
           )
 
       - name: Create ZIP package
         shell: powershell
         run: |
-          if (Test-Path MetroSmash-Windows-x64.zip) { Remove-Item MetroSmash-Windows-x64.zip -Force }
-          Compress-Archive -Path release\* -DestinationPath MetroSmash-Windows-x64.zip
+          Compress-Archive -Path release\* -DestinationPath MetroSmash.zip -Force
 
       - name: Upload folder artifact
         uses: actions/upload-artifact@v4
@@ -74,10 +78,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MetroSmash-Windows-ZIP
-          path: MetroSmash-Windows-x64.zip
+          path: MetroSmash.zip
           retention-days: 30
 
-      - name: Create GitHub Release on push to main
+      - name: Create Release on push to main
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v2
         with:
@@ -85,13 +89,16 @@ jobs:
           name: "MetroSmash Build #${{ github.run_number }}"
           files: |
             release/*
-            MetroSmash-Windows-x64.zip
+            MetroSmash.zip
           body: |
-            Automated Windows build for MetroSmash.
+            Automated build for MetroSmash
 
             Commit: ${{ github.sha }}
 
-            Recommended download: MetroSmash-Windows-x64.zip
-            Extract all files and run MetroSmash.exe.
+            Instructions:
+            - Download MetroSmash.zip
+            - Extract all files
+            - Keep all DLLs next to MetroSmash.exe
+            - Run MetroSmash.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
