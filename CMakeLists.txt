@@ -6,7 +6,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(MSVC)
     add_compile_options(/MP /W3 /wd4244 /wd4267 /wd4996 /wd4018 /wd4305 /wd4100)
-    add_compile_definitions(_CRT_DECLARE_NONSTDC_NAMES=0)
 endif()
 
 find_package(SFML 2.6 COMPONENTS graphics window system audio REQUIRED)
@@ -31,6 +30,10 @@ set(SOURCES
 
 add_executable(MetroSmash ${SOURCES})
 target_include_directories(MetroSmash PRIVATE src)
+
+if(MSVC)
+    target_compile_options(MetroSmash PRIVATE /FI"${CMAKE_SOURCE_DIR}/src/MathFix.h")
+endif()
 
 target_link_libraries(MetroSmash
     sfml-graphics
