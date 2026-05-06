@@ -60,6 +60,8 @@ private:
     void drawVehicle(const Vehicle& v);
     void drawPlayer(const Player& p, const Camera& cam);
     void drawSkyboxLegacy();
+    void drawVegetation(const std::vector<VegetationNode>& nodes, float time);
+    void drawPedestrians(const std::vector<Pedestrian>& peds);
 
     // ── Shared primitives ─────────────────────────────────────────────────
     void drawCube(Vec3 pos, Vec3 halfSize, Vec3 color, float alpha = 1.f);

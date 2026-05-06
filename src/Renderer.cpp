@@ -239,6 +239,12 @@ void Renderer::renderLegacy(const World& world, const Camera& camera) {
     if (world.player.mode == PlayerMode::ON_FOOT)
         drawPlayer(world.player, camera);
 
+    // City life
+    static sf::Clock vegClock;
+    float vegTime = vegClock.getElapsedTime().asSeconds();
+    drawVegetation(world.vegetation, vegTime);
+    drawPedestrians(world.pedestrians);
+
     drawParticles(world.particles);
     drawExplosionFX(world.physics.activeExplosions);
     drawExplosiveMarkers(world.player);
@@ -657,6 +663,192 @@ void Renderer::drawDebrisChunks(const std::vector<DebrisAnim>& chunks) {
         glNormal3f(0,1,0);  glVertex3f(-s,s,s);   glVertex3f(s,s,s);   glVertex3f(s,s,-s); glVertex3f(-s,s,-s);
         glNormal3f(0,-1,0); glVertex3f(-s,-s,-s);  glVertex3f(s,-s,-s); glVertex3f(s,-s,s);glVertex3f(-s,-s,s);
         glEnd();
+        glPopMatrix();
+    }
+    glEnable(GL_LIGHTING);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Vegetation — trees (trunk + layered canopy cones), bushes, street lamps
+//  All geometry uses GL immediate mode to match the rest of the legacy path.
+//  Wind sway is a simple sinusoidal lean applied per-node via glRotate.
+// ─────────────────────────────────────────────────────────────────────────────
+void Renderer::drawVegetation(const std::vector<VegetationNode>& nodes, float time) {
+    glEnable(GL_BLEND);
+
+    for (const auto& n : nodes) {
+        glPushMatrix();
+        glTranslatef(n.position.x, 0.f, n.position.z);
+
+        if (n.kind == VegetationNode::Kind::LAMP) {
+            // ── Street lamp ───────────────────────────────────────────────
+            // Pole
+            glColor3f(0.25f, 0.25f, 0.28f);
+            glPushMatrix();
+            glTranslatef(0, n.height * 0.5f, 0);
+            glBegin(GL_QUADS);
+            float pw = 0.08f, ph = n.height * 0.5f;
+            glVertex3f(-pw,-ph,-pw); glVertex3f( pw,-ph,-pw);
+            glVertex3f( pw, ph,-pw); glVertex3f(-pw, ph,-pw);
+            glVertex3f(-pw,-ph, pw); glVertex3f( pw,-ph, pw);
+            glVertex3f( pw, ph, pw); glVertex3f(-pw, ph, pw);
+            glVertex3f(-pw,-ph,-pw); glVertex3f(-pw,-ph, pw);
+            glVertex3f(-pw, ph, pw); glVertex3f(-pw, ph,-pw);
+            glVertex3f( pw,-ph,-pw); glVertex3f( pw,-ph, pw);
+            glVertex3f( pw, ph, pw); glVertex3f( pw, ph,-pw);
+            glEnd();
+            glPopMatrix();
+            // Arm
+            glColor3f(0.22f, 0.22f, 0.25f);
+            glBegin(GL_LINES);
+            glVertex3f(0, n.height, 0); glVertex3f(0.7f, n.height + 0.3f, 0);
+            glEnd();
+            // Bulb glow
+            float flicker = 0.9f + 0.1f * sinf(time * 47.3f + n.swayPhase);
+            glColor4f(n.leafColor.x * flicker, n.leafColor.y * flicker,
+                      n.leafColor.z * flicker, 0.85f);
+            glPushMatrix();
+            glTranslatef(0.7f, n.height + 0.3f, 0.f);
+            int s = 8;
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex3f(0,0,0);
+            for (int i = 0; i <= s; i++) {
+                float a = i * 2.f * PI / s;
+                glVertex3f(cosf(a)*0.18f, sinf(a)*0.18f, 0);
+            }
+            glEnd();
+            glPopMatrix();
+        }
+        else {
+            // ── Wind sway — lean the whole node slightly ──────────────────
+            float sway = n.swayAmp * sinf(time * 1.3f + n.swayPhase)
+                        * (1.f + 0.4f * sinf(time * 2.7f + n.swayPhase * 0.5f));
+            float swayZ = n.swayAmp * 0.6f * cosf(time * 1.1f + n.swayPhase + 1.f);
+            glRotatef(sway * 180.f / PI, 0, 0, 1);
+            glRotatef(swayZ * 180.f / PI, 1, 0, 0);
+
+            if (n.kind == VegetationNode::Kind::TREE) {
+                // ── Trunk ─────────────────────────────────────────────────
+                Vec3 tc = n.burning
+                    ? Vec3{0.4f, 0.2f, 0.05f}  // charred
+                    : Vec3{0.42f, 0.28f, 0.12f};
+                glColor3f(tc.x, tc.y, tc.z);
+                float tw = 0.18f + n.height * 0.025f;
+                glBegin(GL_QUADS);
+                // 4 sides of trunk (octagonal approximation via 4 quads)
+                for (int side = 0; side < 4; side++) {
+                    float a0 = side * PI * 0.5f, a1 = a0 + PI * 0.5f;
+                    float x0 = cosf(a0)*tw, z0 = sinf(a0)*tw;
+                    float x1 = cosf(a1)*tw, z1 = sinf(a1)*tw;
+                    glNormal3f(cosf(a0+PI*0.25f), 0, sinf(a0+PI*0.25f));
+                    glVertex3f(x0, 0,          z0);
+                    glVertex3f(x1, 0,          z1);
+                    glVertex3f(x1, n.height,   z1);
+                    glVertex3f(x0, n.height,   z0);
+                }
+                glEnd();
+
+                // ── Canopy — 3 stacked cones ──────────────────────────────
+                if (!n.burning) {
+                    int layers = 3;
+                    for (int L = 0; L < layers; L++) {
+                        float frac    = (float)L / layers;
+                        float cy      = n.height * (0.45f + frac * 0.45f);
+                        float cr      = n.radius  * (1.f   - frac * 0.55f);
+                        float cheight = n.height  * 0.35f;
+                        // Each layer slightly greener at top
+                        float bright = 1.f - frac * 0.2f;
+                        Vec3  lc     = n.leafColor;
+                        glColor4f(lc.x*bright, lc.y*bright, lc.z*bright, 0.92f);
+                        int segs = 12;
+                        // Cone body
+                        glBegin(GL_TRIANGLE_FAN);
+                        glVertex3f(0, cy + cheight, 0); // apex
+                        for (int i = 0; i <= segs; i++) {
+                            float a = i * 2.f * PI / segs;
+                            glVertex3f(cosf(a)*cr, cy, sinf(a)*cr);
+                        }
+                        glEnd();
+                        // Cone base cap
+                        glBegin(GL_TRIANGLE_FAN);
+                        glVertex3f(0, cy, 0);
+                        for (int i = segs; i >= 0; i--) {
+                            float a = i * 2.f * PI / segs;
+                            glVertex3f(cosf(a)*cr, cy, sinf(a)*cr);
+                        }
+                        glEnd();
+                    }
+                } else {
+                    // Burning tree — orange glow blob
+                    float flickerB = 0.7f + 0.3f * sinf(time * 12.f + n.swayPhase);
+                    glColor4f(1.f, 0.35f * flickerB, 0.f, 0.6f);
+                    int segs = 10;
+                    glBegin(GL_TRIANGLE_FAN);
+                    glVertex3f(0, n.height + n.radius, 0);
+                    for (int i = 0; i <= segs; i++) {
+                        float a = i * 2.f * PI / segs;
+                        glVertex3f(cosf(a)*n.radius, n.height*0.5f, sinf(a)*n.radius);
+                    }
+                    glEnd();
+                }
+            }
+            else { // BUSH
+                Vec3 bc = n.burning
+                    ? Vec3{0.6f, 0.2f, 0.0f}
+                    : n.leafColor;
+                glColor4f(bc.x, bc.y, bc.z, 0.88f);
+                // Rounded bush = overlapping spheroid approximation (2 hemispheres + cylinder)
+                int segs = 10;
+                float bh = n.height, br = n.radius;
+                // Top hemisphere
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex3f(0, bh, 0);
+                for (int i = 0; i <= segs; i++) {
+                    float a = i * 2.f * PI / segs;
+                    glVertex3f(cosf(a)*br, bh*0.5f, sinf(a)*br);
+                }
+                glEnd();
+                // Bottom skirt
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex3f(0, 0, 0);
+                for (int i = segs; i >= 0; i--) {
+                    float a = i * 2.f * PI / segs;
+                    glVertex3f(cosf(a)*br, bh*0.4f, sinf(a)*br);
+                }
+                glEnd();
+            }
+        }
+
+        glPopMatrix();
+    }
+
+    glDisable(GL_BLEND);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  Pedestrian rendering — simple stick figure silhouettes
+// ─────────────────────────────────────────────────────────────────────────────
+void Renderer::drawPedestrians(const std::vector<Pedestrian>& peds) {
+    glDisable(GL_LIGHTING);
+    for (const auto& p : peds) {
+        glPushMatrix();
+        glTranslatef(p.position.x, 0, p.position.z);
+        glRotatef(-p.yaw * 180.f / PI, 0, 1, 0);
+
+        // Panicking = red, walking = varied skin/clothes
+        if (p.panicking)
+            glColor3f(0.9f, 0.15f, 0.15f);
+        else
+            glColor3f(0.4f + p.speed * 0.1f,
+                      0.3f + p.speed * 0.05f,
+                      0.6f - p.speed * 0.05f);
+
+        // Body (tiny cube)
+        drawCube({0, 0.55f, 0}, {0.12f, 0.25f, 0.1f},
+                 p.panicking ? Vec3{0.8f,0.1f,0.1f} : Vec3{0.3f,0.4f,0.7f});
+        // Head
+        drawCube({0, 1.0f, 0}, {0.1f, 0.1f, 0.1f}, {0.82f, 0.65f, 0.5f});
+
         glPopMatrix();
     }
     glEnable(GL_LIGHTING);

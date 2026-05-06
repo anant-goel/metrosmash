@@ -107,7 +107,7 @@ void UI::drawWeaponBar(sf::RenderWindow& w, const World& world) {
 
             // Ammo count
             std::string ammoStr = std::to_string(world.weapons.ammo[i]);
-            if (world.weapons.ammo[i] == 99) ammoStr = "∞";
+            if (world.weapons.ammo[i] >= 99) ammoStr = "∞";
             auto at = makeText(ammoStr, 16, sel ? sf::Color(255,220,100) : sf::Color(150,150,200));
             at.setPosition({x + barW/2.f - at.getLocalBounds().width/2.f, y + barH - 22.f});
             w.draw(at);
