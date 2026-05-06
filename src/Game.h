@@ -11,6 +11,8 @@ class UI;
 
 class Game {
 public:
+    Game();
+    ~Game();  // defined in Game.cpp after Impl is complete
     void run();
 private:
     // Use unique_ptr for SFML/Renderer/UI types so headers stay clean

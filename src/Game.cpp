@@ -19,6 +19,12 @@ struct Game::Impl {
     UI               ui;
 };
 
+// Destructor (and constructor) defined here so Impl is complete when
+// unique_ptr<Impl>'s deleter is instantiated — never in a TU that only
+// sees the forward declaration in Game.h.
+Game::Game()  = default;
+Game::~Game() = default;
+
 void Game::run() {
     init();
     while (running && impl->window.isOpen()) {
