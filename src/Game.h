@@ -2,7 +2,6 @@
 // NO SFML includes here - all SFML types forward declared or in .cpp
 #include "World.h"
 #include "Camera.h"
-#include <memory>
 
 namespace sf { class RenderWindow; class Clock; }
 // Renderer and UI are included in Game.cpp only
@@ -11,9 +10,6 @@ class UI;
 
 class Game {
 public:
-    Game();
-    ~Game();
-
     void run();
 private:
     // Use unique_ptr for SFML/Renderer/UI types so headers stay clean

@@ -33,7 +33,6 @@ struct Vec2 {
     Vec2 operator+(const Vec2& o) const { return {x+o.x, y+o.y}; }
     Vec2 operator-(const Vec2& o) const { return {x-o.x, y-o.y}; }
     Vec2 operator*(float s) const { return {x*s, y*s}; }
-    Vec2 operator/(float s) const { return {x/s, y/s}; }
     float length() const { return std::sqrt(x*x + y*y); }
     Vec2 normalized() const {
         float l = length();

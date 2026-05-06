@@ -77,8 +77,6 @@ void World::update(float dt) {
     weapons.update(dt);
     achievements.update(dt);
     anim.update(dt);
-    for (auto& p : particles) p.update(dt);
-    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const ParticleEffect& p){ return p.done(); }), particles.end());
 
     // Vehicle ramming
     for (auto& v : vehicles) {

@@ -148,7 +148,7 @@ void UI::drawDestructionMeter(sf::RenderWindow& w, float pct) {
 }
 
 void UI::drawVehicleHUD(sf::RenderWindow& w, const World& world) {
-    if (!impl->fontLoaded || world.player.mode != PlayerMode::IN_VEHICLE) return;
+    if (!fontLoaded || world.player.mode != PlayerMode::IN_VEHICLE) return;
     for (auto& v : world.vehicles) {
         if (!v->occupied) continue;
         float spd = std::abs(v->speed) * 3.6f;
@@ -193,7 +193,7 @@ void UI::drawControls(sf::RenderWindow& w, const World& world) {
     sf::Color c(200,200,200,150);
     std::vector<std::string> lines =
         world.player.mode == PlayerMode::ON_FOOT ?
-        std::vector<std::string>{"WASD - Move","Mouse - Look","Space - Jump",
+        std::vector<std::string>{"WASD - Move","Mouse - Look","Space - Jump","C - Camera Mode","G - Graphics","T - Time of Day","P - Rain Toggle","F1-F6 - FX Toggles",
                                  "E - Fire Weapon","Q - Detonate",
                                  "Tab/Scroll - Switch Weapon",
                                  "1-9 - Select Weapon",

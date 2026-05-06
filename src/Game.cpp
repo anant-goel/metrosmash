@@ -7,6 +7,7 @@
 #include "Game.h"
 #include "Renderer.h"
 #include "UI.h"
+#include "GfxShaders.h"
 #include <cmath>
 #include <functional>
 
@@ -17,9 +18,6 @@ struct Game::Impl {
     Renderer         renderer;
     UI               ui;
 };
-
-Game::Game() = default;
-Game::~Game() = default;
 
 void Game::run() {
     init();
@@ -153,6 +151,34 @@ void Game::onKeyPressed(int k) {
         }
         break;
     case K::Tab: world.weapons.selectNext(); world.audio.play("ui_click",60.f); break;
+
+    // ── Graphics panel (G) ────────────────────────────────────────────────
+    case K::G:
+        impl->renderer.gfxPanel.visible = !impl->renderer.gfxPanel.visible;
+        break;
+
+    // ── Camera mode cycle (C) ─────────────────────────────────────────────
+    case K::C:
+        camera.toggleMode();
+        if (camera.mode == CameraMode::FREE) {
+            unlockMouse();          // allow cursor for free-cam
+            lockMouse();            // re-lock so delta still works
+        }
+        break;
+
+    // ── Time of day (T cycles through: day/sunset/night) ──────────────────
+    case K::T:
+        {
+            float& tod = impl->renderer.gfxPanel.timeOfDay;
+            tod = (tod >= 0.8f) ? 0.0f : (tod >= 0.4f) ? 0.85f : 0.5f;
+            gGfx.settings.timeOfDay = tod;
+        }
+        break;
+
+    // ── Rain toggle (P) ───────────────────────────────────────────────────
+    case K::P:
+        impl->renderer.gfxPanel.rainEnabled = !impl->renderer.gfxPanel.rainEnabled;
+        break;
     case K::Num1: world.weapons.selectedIdx=0; break;
     case K::Num2: if(world.weapons.defs[1].unlocked) world.weapons.selectedIdx=1; break;
     case K::Num3: if(world.weapons.defs[2].unlocked) world.weapons.selectedIdx=2; break;
@@ -162,6 +188,24 @@ void Game::onKeyPressed(int k) {
     case K::Num7: if(world.weapons.defs[6].unlocked) world.weapons.selectedIdx=6; break;
     case K::Num8: if(world.weapons.defs[7].unlocked) world.weapons.selectedIdx=7; break;
     case K::Num9: if(world.weapons.defs[8].unlocked) world.weapons.selectedIdx=8; break;
+    case K::F1:
+        impl->renderer.gfxPanel.shadowsEnabled = !impl->renderer.gfxPanel.shadowsEnabled;
+        break;
+    case K::F2:
+        impl->renderer.gfxPanel.ssaoEnabled = !impl->renderer.gfxPanel.ssaoEnabled;
+        break;
+    case K::F3:
+        impl->renderer.gfxPanel.bloomEnabled = !impl->renderer.gfxPanel.bloomEnabled;
+        break;
+    case K::F4:
+        impl->renderer.gfxPanel.vignetteOn = !impl->renderer.gfxPanel.vignetteOn;
+        break;
+    case K::F5:
+        impl->renderer.gfxPanel.grainOn = !impl->renderer.gfxPanel.grainOn;
+        break;
+    case K::F6:
+        impl->renderer.gfxPanel.chromaticOn = !impl->renderer.gfxPanel.chromaticOn;
+        break;
     default: break;
     }
 }
@@ -176,6 +220,20 @@ void Game::handleInput(float dt) {
     if (paused) return;
     using K = sf::Keyboard::Key;
     Player& p = world.player;
+    // ── Free camera movement ─────────────────────────────────────────────
+    if (camera.mode == CameraMode::FREE) {
+        camera.freeCamFast = sf::Keyboard::isKeyPressed(K::LShift);
+        Vec3 delta(0,0,0);
+        if (sf::Keyboard::isKeyPressed(K::W)) delta.z += dt;
+        if (sf::Keyboard::isKeyPressed(K::S)) delta.z -= dt;
+        if (sf::Keyboard::isKeyPressed(K::A)) delta.x -= dt;
+        if (sf::Keyboard::isKeyPressed(K::D)) delta.x += dt;
+        if (sf::Keyboard::isKeyPressed(K::Q)) delta.y -= dt;
+        if (sf::Keyboard::isKeyPressed(K::E)) delta.y += dt;
+        camera.moveFree(delta);
+        return;  // skip player/vehicle input in free-cam
+    }
+
     if (p.mode == PlayerMode::ON_FOOT) {
         p.moveF   = sf::Keyboard::isKeyPressed(K::W);
         p.moveB   = sf::Keyboard::isKeyPressed(K::S);
@@ -202,6 +260,7 @@ void Game::update(float dt) {
     world.update(dt);
     Vec3 target = world.player.position;
     for (auto& v : world.vehicles) if (v->occupied) { target = v->position; break; }
+    camera.update(dt);
     Vec3 shakeOff = world.anim.shake.getOffset();
     camera.followTarget(target);
     camera.position += shakeOff;
@@ -211,5 +270,89 @@ void Game::render() {
     impl->window.setActive(true);
     impl->renderer.render(world, camera, impl->window);
     impl->ui.draw(impl->window, world, paused);
+
+    // ── Graphics settings overlay panel ───────────────────────────────────
+    if (impl->renderer.gfxPanel.visible) {
+        impl->window.pushGLStates();
+        float W = (float)impl->window.getSize().x;
+        float H = (float)impl->window.getSize().y;
+
+        // Load font once
+        static sf::Font panelFont;
+        static bool fontLoaded = false;
+        if (!fontLoaded) {
+            fontLoaded = panelFont.loadFromFile("assets/fonts/GameFont.ttf");
+        }
+
+        // Background panel
+        sf::RectangleShape bg(sf::Vector2f(300.f, 370.f));
+        bg.setFillColor(sf::Color(0,0,0,180));
+        bg.setOutlineColor(sf::Color(80,80,80,220));
+        bg.setOutlineThickness(1.f);
+        bg.setPosition(W - 315.f, 80.f);
+        impl->window.draw(bg);
+
+        auto& gp = impl->renderer.gfxPanel;
+        auto& gs = impl->renderer.gGfx.settings;
+        struct Row { const char* label; bool* toggle; };
+        Row rows[] = {
+            {"[G] GRAPHICS PANEL",    nullptr},
+            {"Shaders  (Tab)",        &gp.shadersEnabled},
+            {"Shadows  (F1)",         &gp.shadowsEnabled},
+            {"SSAO     (F2)",         &gp.ssaoEnabled},
+            {"Bloom    (F3)",         &gp.bloomEnabled},
+            {"Vignette (F4)",         &gp.vignetteOn},
+            {"Film Grain (F5)",       &gp.grainOn},
+            {"Chromatic Ab. (F6)",    &gp.chromaticOn},
+            {"Rain     [P]",          &gp.rainEnabled},
+            {nullptr, nullptr},
+            {"Time of Day [T]:",      nullptr},
+            {"Fog density:",          nullptr},
+            {nullptr, nullptr},
+            {"[C] Cycle Camera Mode", nullptr},
+        };
+
+        float x = W - 308.f, y = 90.f;
+        for (auto& row : rows) {
+            if (!row.label) { y += 8.f; continue; }
+            sf::Text txt;
+            txt.setFont(panelFont);
+            txt.setCharacterSize(13);
+            txt.setPosition(x, y);
+            if (row.toggle == nullptr) {
+                txt.setFillColor(sf::Color(200,200,60,255));
+                txt.setString(row.label);
+            } else {
+                bool on = *row.toggle;
+                txt.setFillColor(on ? sf::Color(80,255,80,255) : sf::Color(200,80,80,255));
+                txt.setString(std::string(row.label) + (on ? "  [ON]" : " [OFF]"));
+            }
+            impl->window.draw(txt);
+            y += 22.f;
+        }
+
+        // Time of day slider
+        {
+            sf::Text lbl; lbl.setFont(panelFont); lbl.setCharacterSize(12);
+            lbl.setFillColor(sf::Color(180,180,180,255));
+            const char* todNames[] = {"NIGHT","SUNRISE","DAY","SUNSET"};
+            int ti = (gp.timeOfDay < 0.25f) ? 0 :
+                     (gp.timeOfDay < 0.5f)  ? 1 :
+                     (gp.timeOfDay < 0.75f) ? 2 : 3;
+            lbl.setString(std::string("  -> ") + todNames[ti]);
+            lbl.setPosition(x, y); impl->window.draw(lbl); y += 18.f;
+        }
+        // Camera mode label
+        {
+            sf::Text lbl; lbl.setFont(panelFont); lbl.setCharacterSize(12);
+            lbl.setFillColor(sf::Color(180,180,180,255));
+            const char* modeNames[] = {"THIRD PERSON","FREE FLY","FIRST PERSON","CINEMATIC"};
+            int mi = (int)camera.mode;
+            lbl.setString(std::string("  -> ") + modeNames[mi < 4 ? mi : 0]);
+            lbl.setPosition(x, y); impl->window.draw(lbl);
+        }
+
+        impl->window.popGLStates();
+    }
     impl->window.display();
 }
