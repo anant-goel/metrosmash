@@ -133,6 +133,11 @@ void Renderer::render(const World& world, const Camera& camera,
 //  ADVANCED RENDER PATH (PBR + shadows + SSAO + bloom + HDR)
 // ─────────────────────────────────────────────────────────────────────────────
 void Renderer::renderAdvanced(const World& world, const Camera& camera) {
+    // Safety clear — ensures screen is never blank if a pass silently fails
+    float tod = gfxPanel.timeOfDay;
+    glClearColor(0.35f + tod*0.15f, 0.50f + tod*0.20f, 0.65f + tod*0.25f, 1.f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
     Vec3 camPos = camera.getEffectivePos();
     Vec3 sunDir = gGfx.getSunDir();
 

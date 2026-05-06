@@ -28,7 +28,12 @@ set(SOURCES
     src/GfxShaders.cpp          # ← Advanced graphics pipeline (NEW)
 )
 
-add_executable(MetroSmash ${SOURCES})
+# Windows: embed icon + version info from the resource script
+if(WIN32)
+    list(APPEND SOURCES src/MetroSmash.rc)
+endif()
+
+add_executable(MetroSmash WIN32 ${SOURCES})
 target_include_directories(MetroSmash PRIVATE src)
 
 if(MSVC)
@@ -41,6 +46,7 @@ target_link_libraries(MetroSmash
     sfml-system
     sfml-audio
     OpenGL::GL
+    $<$<BOOL:${WIN32}>:sfml-main>   # bridges WinMain → main() for WIN32 subsystem
 )
 
 if(EXISTS ${CMAKE_SOURCE_DIR}/assets)

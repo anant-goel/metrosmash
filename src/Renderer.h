@@ -17,7 +17,7 @@ public:
     // ── Graphics settings panel (toggle: G key) ───────────────────────────
     struct GfxPanel {
         bool  visible         = false;
-        bool  shadersEnabled  = true;
+        bool  shadersEnabled  = false;  // off by default; toggle with Tab once GPU is verified
         bool  shadowsEnabled  = true;
         bool  ssaoEnabled     = true;
         bool  bloomEnabled    = true;
