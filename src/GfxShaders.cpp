@@ -210,6 +210,7 @@ static struct GlExt {
 #define GL_COLOR_ATTACHMENT0        0x8CE0
 #define GL_COLOR_ATTACHMENT1        0x8CE1
 #define GL_COLOR_ATTACHMENT2        0x8CE2
+#define GL_COLOR_ATTACHMENT3        0x8CE3
 #define GL_DEPTH_ATTACHMENT         0x8D00
 #define GL_FRAMEBUFFER_COMPLETE     0x8CD5
 #define GL_DEPTH_COMPONENT          0x1902

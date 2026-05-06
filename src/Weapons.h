@@ -5,6 +5,22 @@
 #include <string>
 #include <functional>
 
+// Visual particle spawned by explosions / FX
+struct ParticleEffect {
+    Vec3  position;
+    Vec3  velocity;
+    Vec3  color;
+    float size    = 0.1f;
+    float life    = 1.f;
+    float maxLife = 1.f;
+    bool  done() const { return life <= 0.f; }
+    void  update(float dt) {
+        velocity.y -= 9.8f * dt;
+        position   += velocity * dt;
+        life       -= dt;
+    }
+};
+
 enum class WeaponType {
     C4,
     MISSILE,

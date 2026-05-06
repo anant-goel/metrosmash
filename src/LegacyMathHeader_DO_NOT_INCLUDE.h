@@ -79,14 +79,14 @@ struct Mat4 {
         return r;
     }
 
-    static Mat4 perspective(float fov, float aspect, float near, float far) {
+    static Mat4 perspective(float fov, float aspect, float zNear, float zFar) {
         Mat4 r;
         float f = 1.f / tanf(fov * 0.5f);
         r.m[0]  = f / aspect;
         r.m[5]  = f;
-        r.m[10] = (far + near) / (near - far);
+        r.m[10] = (zFar + zNear) / (zNear - zFar);
         r.m[11] = -1.f;
-        r.m[14] = (2.f * far * near) / (near - far);
+        r.m[14] = (2.f * zFar * zNear) / (zNear - zFar);
         return r;
     }
 

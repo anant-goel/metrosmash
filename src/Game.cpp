@@ -293,7 +293,7 @@ void Game::render() {
         impl->window.draw(bg);
 
         auto& gp = impl->renderer.gfxPanel;
-        auto& gs = impl->renderer.gGfx.settings;
+        auto& gs = gGfx.settings;
         struct Row { const char* label; bool* toggle; };
         Row rows[] = {
             {"[G] GRAPHICS PANEL",    nullptr},

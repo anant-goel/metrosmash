@@ -14,6 +14,7 @@ class World {
 public:
     std::vector<Building>                 buildings;
     std::vector<std::unique_ptr<Vehicle>> vehicles;
+    std::vector<ParticleEffect>           particles;   // visual FX particles
 
     Player           player;
     Physics          physics;

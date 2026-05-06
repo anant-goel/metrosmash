@@ -705,11 +705,7 @@ public:
     Vec3 getSkyHorizon() const;
     Vec3 getFogColor() const;
 
-private:
-    int screenW = 1280, screenH = 720;
-    int renderW = 1280, renderH = 720;
-
-    // Framebuffers
+    // Framebuffers (public so Renderer can bind them for forward passes)
     Framebuffer fbGBuffer;    // G-buffer (3 MRTs)
     Framebuffer fbShadow;     // Shadow map
     Framebuffer fbSSAO;       // SSAO
@@ -718,6 +714,10 @@ private:
     Framebuffer fbBloomA;     // Bloom ping-pong A
     Framebuffer fbBloomB;     // Bloom ping-pong B
     Framebuffer fbHaze;       // Heat haze
+
+private:
+    int screenW = 1280, screenH = 720;
+    int renderW = 1280, renderH = 720;
 
     // Shaders
     ShaderProgram sGeom;

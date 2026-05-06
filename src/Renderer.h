@@ -1,6 +1,7 @@
 #pragma once
 #include "GameMath.h"
 #include "World.h"
+#include "Weapons.h"
 #include <string>
 
 namespace sf { class RenderWindow; }
