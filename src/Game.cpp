@@ -8,6 +8,7 @@
 #include "Renderer.h"
 #include "UI.h"
 #include "GfxShaders.h"
+#include "Log.h"
 #include <cmath>
 #include <functional>
 
@@ -44,6 +45,7 @@ void Game::run() {
 }
 
 void Game::init() {
+    Log::info("Game::init — creating window");
     impl = std::make_unique<Impl>();
 
     sf::ContextSettings settings;
@@ -57,10 +59,13 @@ void Game::init() {
     impl->window.setVerticalSyncEnabled(true);
     impl->window.setFramerateLimit(120);
 
+    Log::info("Window created — initialising renderer");
     impl->renderer.init(1280, 720);
     camera.aspect = 1280.f / 720.f;
     impl->ui.init("assets/fonts/GameFont.ttf");
+    Log::info("Loading world assets");
     world.init("assets");
+    Log::info("Game::init complete");
     lockMouse();
 }
 
@@ -105,7 +110,16 @@ void Game::handleEvents() {
                 }
             }
         }
-        else if (ev.type == sf::Event::MouseWheelScrolled) {
+        else if (ev.type == sf::Event::MouseButtonPressed) {
+            if (ev.mouseButton.button == sf::Mouse::Right) {
+                // Right-click toggles mouse lock (lets you use UI/graphics panel)
+                if (mouseLocked) unlockMouse();
+                else if (!paused) lockMouse();
+            } else if (ev.mouseButton.button == sf::Mouse::Left) {
+                // Left-click re-locks if not paused
+                if (!mouseLocked && !paused) lockMouse();
+            }
+        }
             if (ev.mouseWheelScroll.delta > 0) world.weapons.selectNext();
             else                              world.weapons.selectPrev();
             world.audio.play("ui_click", 60.f);
@@ -274,6 +288,7 @@ void Game::update(float dt) {
 
 void Game::render() {
     impl->window.setActive(true);
+    impl->renderer.dt = impl->clock.getElapsedTime().asSeconds();
     impl->renderer.render(world, camera, impl->window);
     impl->ui.draw(impl->window, world, paused);
 

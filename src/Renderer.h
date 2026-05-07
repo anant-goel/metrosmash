@@ -14,21 +14,20 @@ public:
                 const sf::RenderWindow& win);
     void resize(unsigned int w, unsigned int h);
 
-    // ── Graphics settings panel (toggle: G key) ───────────────────────────
     struct GfxPanel {
-        bool  visible         = false;
-        bool  shadersEnabled  = false;  // off by default; toggle with Tab once GPU is verified
-        bool  shadowsEnabled  = true;
-        bool  ssaoEnabled     = true;
-        bool  bloomEnabled    = true;
-        bool  vignetteOn      = true;
-        bool  grainOn         = true;
-        bool  chromaticOn     = true;
-        bool  rainEnabled     = false;
-        float timeOfDay       = 0.6f;
-        float fogDensity      = 0.006f;
-        float exposure        = 1.2f;
-        float bloomStrength   = 0.25f;
+        bool  visible        = false;
+        bool  shadersEnabled = false;
+        bool  shadowsEnabled = true;
+        bool  ssaoEnabled    = true;
+        bool  bloomEnabled   = true;
+        bool  vignetteOn     = true;
+        bool  grainOn        = true;
+        bool  chromaticOn    = true;
+        bool  rainEnabled    = false;
+        float timeOfDay      = 0.0f;   // 0=midday, 0.5=sunset, 1=night
+        float fogDensity     = 0.006f;
+        float exposure       = 1.2f;
+        float bloomStrength  = 0.25f;
     } gfxPanel;
 
     float gameTime = 0.f;
@@ -38,43 +37,43 @@ private:
     unsigned int screenW = 1280, screenH = 720;
 
     void setupGL();
+    void updateSunLight(float tod);
     void setMatrices(const Camera& cam);
-    void setModelMatrix(Vec3 pos, float yawAngle = 0.f, Vec3 scl = {1,1,1});
-    void pushIdentityModel();
 
-    // ── Advanced pipeline passes ──────────────────────────────────────────
-    void renderAdvanced(const World& world, const Camera& camera);
+    // ── Render paths ──────────────────────────────────────────────────────
     void renderLegacy  (const World& world, const Camera& camera);
-    void renderShadowPass(const World& world, const Camera& cam);
-    void drawBuildingShadow(const Building& b);
+    void renderAdvanced(const World& world, const Camera& camera); // stub
 
-    // ── Advanced draw helpers (PBR uniforms) ──────────────────────────────
+    // ── Advanced stubs (keep linker happy) ────────────────────────────────
+    void renderShadowPass(const World&, const Camera&);
+    void drawBuildingShadow(const Building&);
     void drawGroundAdvanced();
-    void drawBuildingAdvanced(const Building& b);
-    void drawVehicleAdvanced(const Vehicle& v);
-    void drawPlayerAdvanced(const Player& p, const Camera& cam);
-
-    // ── Legacy draw helpers (unchanged GL fixed-function) ─────────────────
-    void drawGround(float size);
-    void drawBuilding(const Building& b);
-    void drawVehicle(const Vehicle& v);
-    void drawPlayer(const Player& p, const Camera& cam);
+    void drawBuildingAdvanced(const Building&);
+    void drawVehicleAdvanced(const Vehicle&);
+    void drawPlayerAdvanced(const Player&, const Camera&);
     void drawSkyboxLegacy();
+    void drawParticles(const std::vector<ParticleEffect>&);
+    void drawExplosionFX(const std::vector<ExplosionForce>&);
+    void drawCubeInstanced(Vec3,Vec3,Vec3,float,float,float,bool,bool);
+
+    // ── Active draw methods ───────────────────────────────────────────────
+    void drawSky(float tod, float hr, float hg, float hb,
+                 float zr, float zg, float zb, const Camera& cam);
+    void drawGround(float tod);                       // enhanced, takes tod
+    void drawBuilding(const Building& b, float tod);  // enhanced
+    void drawVehicle(const Vehicle& v);               // kept
+    void drawPlayer(const Player& p, const Camera& cam); // kept
+
     void drawVegetation(const std::vector<VegetationNode>& nodes, float time);
     void drawPedestrians(const std::vector<Pedestrian>& peds);
 
-    // ── Shared primitives ─────────────────────────────────────────────────
     void drawCube(Vec3 pos, Vec3 halfSize, Vec3 color, float alpha = 1.f);
-    void drawCubeInstanced(Vec3 pos, Vec3 halfSize, Vec3 color,
-                           float roughness, float metallic,
-                           float emissive = 0.f,
-                           bool  isGlass  = false,
-                           bool  isWindow = false);
 
-    // ── FX (unchanged) ─────────────────────────────────────────────────────
-    void drawParticles      (const std::vector<ParticleEffect>&  particles);
-    void drawExplosionFX    (const std::vector<ExplosionForce>&   explosions);
+    void drawExplosionFX(const std::vector<ExplosionForce>& explosions,
+                         const std::vector<ParticleEffect>& particles);
     void drawExplosiveMarkers(const Player& p);
-    void drawShockwaves     (const std::vector<ShockwaveAnim>&    waves);
-    void drawDebrisChunks   (const std::vector<DebrisAnim>&       chunks);
+    void drawShockwaves(const std::vector<ShockwaveAnim>& waves);
+    void drawDebrisChunks(const std::vector<DebrisAnim>& chunks);
+    void drawActiveWeapons(const std::vector<ActiveWeapon>& active);
+    void drawRain(Vec3 cam, float tod);
 };
