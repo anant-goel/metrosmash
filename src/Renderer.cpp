@@ -414,8 +414,10 @@ void Renderer::drawBuilding(const Building& b, float tod) {
         col.x *= nightDim; col.y *= nightDim; col.z *= nightDim;
 
         // Crack darkening
-        if (blk.damage > 0) {
-            float darken = 1.f - blk.damage * 0.18f;
+        float maxHealth = (blk.position.y < 1.f) ? 200.f : 100.f;
+        float crackLevel = 1.f - std::clamp(blk.health / maxHealth, 0.f, 1.f);
+        if (crackLevel > 0.f) {
+            float darken = 1.f - crackLevel * 0.18f;
             col.x *= darken; col.y *= darken; col.z *= darken;
         }
 
