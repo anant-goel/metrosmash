@@ -414,8 +414,8 @@ void Renderer::drawBuilding(const Building& b, float tod) {
         col.x *= nightDim; col.y *= nightDim; col.z *= nightDim;
 
         // Crack darkening
-        if (blk.crackLevel > 0) {
-            float darken = 1.f - blk.crackLevel * 0.18f;
+        if (blk.damage > 0) {
+            float darken = 1.f - blk.damage * 0.18f;
             col.x *= darken; col.y *= darken; col.z *= darken;
         }
 
@@ -872,7 +872,7 @@ void Renderer::drawDebrisChunks(const std::vector<DebrisAnim>& chunks) {
         glPushMatrix();
         glTranslatef(d.pos.x, d.pos.y, d.pos.z);
         glRotatef(d.rot * 180.f / PI, 0.4f, 0.7f, 0.3f);
-        drawCube({0,0,0}, {d.size,d.size,d.size}*0.5f, d.color, a);
+        drawCube({0,0,0}, Vec3{d.size,d.size,d.size}*0.5f, d.color, a);
         glPopMatrix();
     }
 }

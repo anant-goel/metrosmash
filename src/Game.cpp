@@ -120,8 +120,9 @@ void Game::handleEvents() {
                 if (!mouseLocked && !paused) lockMouse();
             }
         }
+        else if (ev.type == sf::Event::MouseWheelScrolled) {
             if (ev.mouseWheelScroll.delta > 0) world.weapons.selectNext();
-            else                              world.weapons.selectPrev();
+            else                               world.weapons.selectPrev();
             world.audio.play("ui_click", 60.f);
         }
     }
